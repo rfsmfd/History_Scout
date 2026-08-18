@@ -268,8 +268,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div class="headline-num" id="hdgBig">—</div>
           <div class="headline-sub" id="hdgSrc">—</div>
           <div class="btnrow" style="margin-top:12px">
+            <button class="btn" id="btnRetry">🧭 Retry compass</button>
             <button class="btn" id="btnManual">✋ Set by hand</button>
-            <button class="btn" id="btnHdgHelp">ℹ️ Which source?</button>
+          </div>
+          <div class="btnrow" style="margin-top:8px">
+            <button class="btn" id="btnHdgHelp">ℹ️ Which source is it using?</button>
           </div>
         </div>
       </div>
@@ -395,7 +398,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 1;
+const BUILD = 2;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -532,7 +535,10 @@ const S = {
   sites: [], photos: [], cats: [],
   pos: null,                 // {lat,lon,acc,alt,altAcc,speed,ts}
   hdg: null, hdgSrc: null, hdgAcc: null, compassOn: false,
-  manualHdg: false,
+  manualHdg: false,      // manual dial is showing
+  manualLocked: false,   // ...because YOU chose it, not because we gave up waiting
+  compassPerm: null,     // 'granted' | 'denied' | 'not required' | 'error'
+  orientSeen: 0,         // how many orientation events have actually arrived
   filter: 'all',
   settings: {stampExport:true, stampView:true, downscale:true, grouping:true, recordedBy:''},
   urls: new Map()            // photoId -> objectURL cache
@@ -611,7 +617,9 @@ function nearestSite(lat,lon){
 })();
 
 function setHeading(h, src, acc){
-  if(S.manualHdg && src !== 'manual') return;
+  // Only a deliberate "set by hand" blocks the sensors. If we fell back to the
+  // dial just because the magnetometer was slow to wake, real data still wins.
+  if(S.manualLocked && src !== 'manual') return;
   S.hdg = ((h%360)+360)%360; S.hdgSrc = src; S.hdgAcc = acc;
   paintHeading();
 }
@@ -628,15 +636,27 @@ function paintHeading(){
   const nd = $('#needle');
   if(nd) nd.setAttribute('transform', `rotate(${-h} 100 100)`);
   $('#hdgBig').textContent = `${h.toFixed(0)}° ${cardinal(h)}`;
-  $('#hdgSrc').textContent = S.manualHdg ? 'set by hand — drag the needle' : S.hdgSrc;
+  $('#hdgSrc').textContent = S.manualHdg
+    ? (S.manualLocked ? 'set by hand — drag the needle' : 'dial — still listening for the compass')
+    : S.hdgSrc;
 }
 
 function onOrient(e){
-  if(S.manualHdg) return;
+  if(S.manualLocked) return;
+  S.orientSeen++;
+  // the sensor finally woke up after we'd fallen back to the dial — hand control back
+  const wake = () => {
+    if(S.manualHdg){
+      S.manualHdg = false;
+      toast('Compass woke up — switched off the manual dial');
+    }
+  };
   if(typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)){
+    wake();
     setHeading(e.webkitCompassHeading, 'iOS true compass', e.webkitCompassAccuracy);
     return;
   }
+  if(e.absolute === true && typeof e.alpha === 'number' && !isNaN(e.alpha)) wake();
   if(e.absolute === true && typeof e.alpha === 'number' && !isNaN(e.alpha)){
     setHeading(360 - e.alpha, 'absolute orientation'); return;
   }
@@ -646,32 +666,52 @@ function onOrient(e){
 }
 
 async function enableCompass(){
+  S.manualLocked = false;
+  S.orientSeen = 0;
   try{
     if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
       const r = await DeviceOrientationEvent.requestPermission();   // must be inside a user gesture
-      if(r !== 'granted'){ toast('Compass permission denied — use "Set by hand"'); showCompass(true); return; }
+      S.compassPerm = r;
+      if(r !== 'granted'){
+        toast('iOS denied compass access — using the dial. Retry in Settings › Safari › Motion & Orientation.', 4200);
+        enableManual(false); showCompass(true); return;
+      }
+    } else {
+      S.compassPerm = 'not required';
     }
+    window.removeEventListener('deviceorientationabsolute', onOrient, true);
+    window.removeEventListener('deviceorientation', onOrient, true);
     window.addEventListener('deviceorientationabsolute', onOrient, true);
     window.addEventListener('deviceorientation', onOrient, true);
     S.compassOn = true;
     showCompass(true);
-    setTimeout(()=>{ if(S.hdg==null){ toast('No compass data — using manual dial'); enableManual(); } }, 2500);
+    toast('Compass on — move the phone in a figure-8 if it stays blank');
+    /* The magnetometer can take several seconds to produce its first reading, and
+       longer if it wants calibrating. Give it room, then offer the dial WITHOUT
+       locking the sensors out — onOrient() takes back over the moment it wakes. */
+    setTimeout(()=>{
+      if(S.hdg == null){
+        enableManual(false);
+        toast('Compass still quiet — use the dial, it will take over if the sensor wakes', 4200);
+      }
+    }, 6000);
   }catch(err){
-    toast('Compass unavailable — using manual dial');
-    enableManual(); showCompass(true);
+    S.compassPerm = 'error';
+    enableManual(false); showCompass(true);
+    toast('Compass unavailable — using the dial');
   }
 }
 function showCompass(on){
   $('#compassOff').style.display = on ? 'none'  : 'block';
   $('#compassOn').style.display  = on ? 'block' : 'none';
 }
-function enableManual(){
+function enableManual(explicit = true){
   S.manualHdg = true;
+  S.manualLocked = !!explicit;   // only YOUR choice locks the sensors out
   S.compassOn = true;
   showCompass(true);
-  if(S.hdg==null) setHeading(0,'manual');
-  else setHeading(S.hdg,'manual');
-  toast('Drag the needle to the direction you\'re facing');
+  setHeading(S.hdg == null ? 0 : S.hdg, 'manual');
+  if(explicit) toast('Drag the needle to the way you\'re facing');
 }
 (function roseDrag(){
   const svg = $('#rose');
@@ -682,7 +722,8 @@ function enableManual(){
     const x = t.clientX - r.left - r.width/2, y = t.clientY - r.top - r.height/2;
     return ((Math.atan2(x,-y)*180/Math.PI)+360)%360;
   };
-  const go = e => { if(!S.manualHdg) return; dragging=true; e.preventDefault(); setHeading(pt(e),'manual'); };
+  // dragging the needle is a deliberate choice — from here the dial wins
+  const go = e => { if(!S.manualHdg) return; dragging=true; S.manualLocked=true; e.preventDefault(); setHeading(pt(e),'manual'); };
   const mv = e => { if(!dragging) return; e.preventDefault(); setHeading(pt(e),'manual'); };
   const up = () => dragging=false;
   svg.addEventListener('touchstart',go,{passive:false});
@@ -1405,6 +1446,8 @@ function runDiag(){
     ['Installed to home screen', std, std?'storage is durable':'add to Home Screen for durable storage'],
     ['Geolocation API', !!navigator.geolocation, S.pos?`fix ±${S.pos.acc.toFixed(0)} m`:'no fix yet'],
     ['Compass permission API', typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function', 'iOS 13+ gesture gate'],
+    ['Compass permission given', S.compassPerm==='granted'||S.compassPerm==='not required', S.compassPerm||'not asked yet'],
+    ['Sensor events arriving', S.orientSeen>0, S.orientSeen>0?S.orientSeen+' events received':'none — sensor is silent'],
     ['Heading live now', S.hdg!=null, S.hdg!=null?`${S.hdg.toFixed(0)}° via ${S.hdgSrc}`:'not yet'],
     ['IndexedDB', !!window.indexedDB, db?'open':'not open'],
     ['Leaflet (map)', typeof L!=='undefined', typeof L!=='undefined'?'loaded':'offline / blocked'],
@@ -1435,7 +1478,8 @@ function showView(v){
 }
 $$('#tabs button').forEach(b => b.onclick = () => showView(b.dataset.v));
 $('#btnCompass').onclick = enableCompass;
-$('#btnManual').onclick  = enableManual;
+$('#btnManual').onclick  = () => enableManual(true);
+$('#btnRetry').onclick   = () => { S.hdg = null; S.hdgSrc = null; S.manualHdg = false; enableCompass(); };
 $('#btnHdgHelp').onclick = () => { openSheet(`
   <h2>Where the heading comes from</h2>
   <p class="hint">History Scout tries four sources, best first. Whichever one is live is printed under the reading and saved with every photo, so you always know how much to trust it.</p>
