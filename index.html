@@ -68,6 +68,34 @@ button{background:none;border:0;cursor:pointer}
 .stat .val{font-size:18px;font-weight:650;margin-top:3px;font-variant-numeric:tabular-nums}
 .stat .sub{font-size:15px;color:var(--ink2);margin-top:2px}
 .stat.wide{grid-column:1/-1;min-height:0}
+.stat.tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.stat.tap:active{background:var(--bg3)}
+/* A home-screen app has no address bar, so it cannot be asked to refresh. It has
+   to notice for itself that a newer build is on the server and say so. Lifted
+   from the Millfield cemetery map, where it already works. */
+#updatebar{
+  position:fixed;left:0;right:0;top:0;z-index:1500;display:none;border:0;width:100%;
+  padding:calc(var(--safe-top) + 13px) 16px 13px;background:var(--accent);color:#FBF3E7;
+  font-size:16px;font-weight:680;font-family:inherit;text-align:center;
+  box-shadow:0 4px 16px rgba(30,26,18,.3);
+}
+#updatebar.on{display:block}
+
+#recBar{
+  display:flex;align-items:center;gap:8px;margin:0 0 14px;
+  background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:4px 4px 4px 12px;
+}
+#recName{
+  flex:1;min-width:0;text-align:left;background:none;border:0;color:var(--ink);
+  font-size:15px;font-weight:600;padding:10px 0;font-family:inherit;
+  white-space:normal;overflow:hidden;line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+#recNew{
+  flex:0 0 auto;background:var(--bg3);border:1px solid var(--line);color:var(--ink);
+  font-size:15px;font-weight:700;padding:10px 14px;border-radius:9px;font-family:inherit;min-height:44px;
+}
+#recNew:active{background:var(--accent);color:#fff}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
 .dot.good{background:var(--good)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
 .dot.pulse{animation:pulse 1.4s infinite}
@@ -230,10 +258,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div class="val" id="stGps"><span class="dot bad pulse"></span>—</div>
           <div class="sub" id="stGpsSub">waiting for GPS…</div>
         </div>
-        <div class="stat">
-          <div class="lbl">Heading</div>
+        <div class="stat tap" id="stHdgCard">
+          <div class="lbl">Heading 🧭</div>
           <div class="val" id="stHdg"><span class="dot bad"></span>—</div>
-          <div class="sub" id="stHdgSub">compass off</div>
+          <div class="sub" id="stHdgSub">tap for compass</div>
         </div>
         <div class="stat wide" id="stTimeCard">
           <div class="lbl">Local time</div>
@@ -241,42 +269,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         </div>
       </div>
 
+      <div id="recBar">
+        <button id="recName">📍 No site yet — the next photo starts one</button>
+        <button id="recNew">＋ New</button>
+      </div>
+
       <div class="cap-row">
         <button class="bigbtn" id="btnCam"><span class="ic">📷</span>Capture Site</button>
         <button class="bigbtn sec" id="btnLib"><span class="ic">🖼</span>From<br>Library</button>
-      </div>
-
-      <div class="card" id="compassCard">
-        <h3>Compass</h3>
-        <div id="compassOff">
-          <p class="hint" style="margin:0 0 10px">iPhone requires a tap to release the compass. Do this once per app launch.</p>
-          <button class="btn pri full" id="btnCompass">🧭 Enable Compass</button>
-        </div>
-        <div id="compassOn" style="display:none">
-          <svg id="rose" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r="92" fill="#F4ECD9" stroke="#C0B08C" stroke-width="2"/>
-            <circle cx="100" cy="100" r="72" fill="none" stroke="#DCD0B1" stroke-width="1"/>
-            <g id="roseTicks" stroke="#6A5C42"></g>
-            <text x="100" y="26" text-anchor="middle" fill="#4A3F2C" font-size="15" font-weight="700">N</text>
-            <text x="176" y="106" text-anchor="middle" fill="#6A5C42" font-size="13">E</text>
-            <text x="100" y="186" text-anchor="middle" fill="#6A5C42" font-size="13">S</text>
-            <text x="24" y="106" text-anchor="middle" fill="#6A5C42" font-size="13">W</text>
-            <g id="needle">
-              <path d="M100 22 L110 100 L100 112 L90 100 Z" fill="#8A5312"/>
-              <path d="M100 178 L110 100 L100 88 L90 100 Z" fill="#A99676"/>
-            </g>
-            <circle cx="100" cy="100" r="6" fill="#211B11"/>
-          </svg>
-          <div class="headline-num" id="hdgBig">—</div>
-          <div class="headline-sub" id="hdgSrc">—</div>
-          <div class="btnrow" style="margin-top:12px">
-            <button class="btn" id="btnRetry">🧭 Retry compass</button>
-            <button class="btn" id="btnManual">✋ Set by hand</button>
-          </div>
-          <div class="btnrow" style="margin-top:8px">
-            <button class="btn" id="btnHdgHelp">ℹ️ Which source is it using?</button>
-          </div>
-        </div>
       </div>
 
       <div class="card">
@@ -340,9 +340,17 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div class="tg on" data-set="downscale"></div>
         </div>
         <div class="sw">
-          <div><div class="t">Group nearby captures</div><div class="d">Offer to add to an existing site when you're within 40 m of one.</div></div>
+          <div><div class="t">Group nearby captures</div><div class="d">Photos taken near the site you're working on join it automatically. The bar on the Capture screen always shows where they're landing.</div></div>
           <div class="tg on" data-set="grouping"></div>
         </div>
+        <label class="f" style="margin:12px 0 0"><span>How near is "the same place"</span>
+          <select id="setRadius">
+            <option value="46">50 yards — a single building</option>
+            <option value="91">100 yards — a house and its outbuildings</option>
+            <option value="274">300 yards — a whole homestead or cemetery</option>
+            <option value="402">a quarter mile — a farm</option>
+          </select>
+        </label>
         <label class="f" style="margin:12px 0 0"><span>Recorded by</span>
           <input type="text" id="setRecorder" placeholder="Your name — goes on every record">
         </label>
@@ -385,8 +393,44 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
+<div id="compassHolder" style="display:none">
+      <div class="card" id="compassCard">
+        <h3>Compass</h3>
+        <div id="compassOff">
+          <p class="hint" style="margin:0 0 10px">iPhone requires a tap to release the compass. Do this once per app launch.</p>
+          <button class="btn pri full" id="btnCompass">🧭 Enable Compass</button>
+        </div>
+        <div id="compassOn" style="display:none">
+          <svg id="rose" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="92" fill="#F4ECD9" stroke="#C0B08C" stroke-width="2"/>
+            <circle cx="100" cy="100" r="72" fill="none" stroke="#DCD0B1" stroke-width="1"/>
+            <g id="roseTicks" stroke="#6A5C42"></g>
+            <text x="100" y="26" text-anchor="middle" fill="#4A3F2C" font-size="15" font-weight="700">N</text>
+            <text x="176" y="106" text-anchor="middle" fill="#6A5C42" font-size="13">E</text>
+            <text x="100" y="186" text-anchor="middle" fill="#6A5C42" font-size="13">S</text>
+            <text x="24" y="106" text-anchor="middle" fill="#6A5C42" font-size="13">W</text>
+            <g id="needle">
+              <path d="M100 22 L110 100 L100 112 L90 100 Z" fill="#8A5312"/>
+              <path d="M100 178 L110 100 L100 88 L90 100 Z" fill="#A99676"/>
+            </g>
+            <circle cx="100" cy="100" r="6" fill="#211B11"/>
+          </svg>
+          <div class="headline-num" id="hdgBig">—</div>
+          <div class="headline-sub" id="hdgSrc">—</div>
+          <div class="btnrow" style="margin-top:12px">
+            <button class="btn" id="btnRetry">🧭 Retry compass</button>
+            <button class="btn" id="btnManual">✋ Set by hand</button>
+          </div>
+          <div class="btnrow" style="margin-top:8px">
+            <button class="btn" id="btnHdgHelp">ℹ️ Which source is it using?</button>
+          </div>
+        </div>
+      </div>
+</div>
+
 <div id="sheet"><div id="sheetbody"><div class="grab"></div><div id="sheetcontent"></div></div></div>
 <div id="viewer"><div class="im"><img id="viewerImg" alt=""></div><div class="bar" id="viewerBar"></div></div>
+<button id="updatebar" onclick="location.reload()">↻ New version ready — tap to update</button>
 <div id="toast"></div>
 <input type="file" id="fileCam" accept="image/*" capture="environment" style="display:none">
 <input type="file" id="fileLib" accept="image/*" multiple style="display:none">
@@ -400,7 +444,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 3;
+const BUILD = 4;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -542,7 +586,9 @@ const S = {
   compassPerm: null,     // 'granted' | 'denied' | 'not required' | 'error'
   orientSeen: 0,         // how many orientation events have actually arrived
   filter: 'all',
-  settings: {stampExport:true, stampView:true, downscale:true, grouping:true, recordedBy:''},
+  currentSiteId: null,   // where photos are landing right now
+  forceNew: false,       // you pressed "+ New" — the next photo starts a fresh site
+  settings: {stampExport:true, stampView:true, downscale:true, grouping:true, groupRadius:274, recordedBy:''},
   urls: new Map()            // photoId -> objectURL cache
 };
 const catById = id => S.cats.find(c=>c.id===id) || {id:'other', name:'Other', ic:'📍', color:'#7A8288'};
@@ -629,7 +675,7 @@ function paintHeading(){
   const h = S.hdg;
   if(h==null){
     $('#stHdg').innerHTML = '<span class="dot bad"></span>—';
-    $('#stHdgSub').textContent = 'compass off';
+    $('#stHdgSub').textContent = 'tap for compass';
     return;
   }
   const rough = S.hdgAcc!=null && (S.hdgAcc<0 || S.hdgAcc>25);
@@ -667,7 +713,7 @@ function onOrient(e){
   }
 }
 
-async function enableCompass(){
+async function enableCompass(quiet = false){
   S.manualLocked = false;
   S.orientSeen = 0;
   try{
@@ -675,7 +721,7 @@ async function enableCompass(){
       const r = await DeviceOrientationEvent.requestPermission();   // must be inside a user gesture
       S.compassPerm = r;
       if(r !== 'granted'){
-        toast('iOS denied compass access — using the dial. Retry in Settings › Safari › Motion & Orientation.', 4200);
+        if(!quiet) toast('iOS denied compass access — using the dial. Retry in Settings › Safari › Motion & Orientation.', 4200);
         enableManual(false); showCompass(true); return;
       }
     } else {
@@ -687,14 +733,14 @@ async function enableCompass(){
     window.addEventListener('deviceorientation', onOrient, true);
     S.compassOn = true;
     showCompass(true);
-    toast('Compass on — move the phone in a figure-8 if it stays blank');
+    if(!quiet) toast('Compass on — move the phone in a figure-8 if it stays blank');
     /* The magnetometer can take several seconds to produce its first reading, and
        longer if it wants calibrating. Give it room, then offer the dial WITHOUT
        locking the sensors out — onOrient() takes back over the moment it wakes. */
     setTimeout(()=>{
       if(S.hdg == null){
         enableManual(false);
-        toast('Compass still quiet — use the dial, it will take over if the sensor wakes', 4200);
+        if(!quiet) toast('Compass still quiet — use the dial, it will take over if the sensor wakes', 4200);
       }
     }, 6000);
   }catch(err){
@@ -820,32 +866,80 @@ async function intake(files, input){
     const recs = [];
     for(const f of files) recs.push(await processPhoto(f));
     if(input) input.value = '';
-    askDestination(recs);
+    routeRecs(recs);
   }catch(err){
     console.error(err);
     toast('Could not read that photo');
   }
 }
 
-/* ---------- new site vs add to existing ---------- */
-function askDestination(recs){
-  const p0 = recs[0];
-  let near = null;
-  if(S.settings.grouping && p0.lat!=null){
-    const n = nearestSite(p0.lat, p0.lon);
-    if(n && n.d <= 40) near = n;
-  }
-  if(!near){ openCategoryPicker(recs); return; }
+/* ---------- where do these photos land? ----------
+   Distance decides the default; the "+ New" button overrides it. Asking on every
+   photo would cost a tap per shot, which is the whole thing this app is trying to
+   avoid — so it only stops to ask when it genuinely does not know. */
+const currentSite = () => S.sites.find(s => s.id === S.currentSiteId) || null;
+const groupRadius = () => S.settings.groupRadius || 274;
 
-  openSheet(`
-    <h2>Near a known site</h2>
-    <p class="hint" style="margin:-4px 0 14px">You're <b>${fmtDist(near.d)}</b> from <b>${esc(near.site.name)}</b>.</p>
-    <button class="btn pri full" id="dAdd" style="margin-bottom:9px">➕ Add ${recs.length>1?'these photos':'this photo'} to ${esc(near.site.name)}</button>
-    <button class="btn full" id="dNew">🆕 This is a different site</button>
-  `);
-  $('#dAdd').onclick = async () => { closeSheet(); await attachTo(near.site.id, recs); };
-  $('#dNew').onclick = () => { closeSheet(); openCategoryPicker(recs); };
+function routeRecs(recs){
+  const p0 = recs[0];
+
+  // you asked for a new one, grouping is off, or there is no position to judge by
+  if(S.forceNew || !S.settings.grouping || p0.lat == null){
+    S.forceNew = false;
+    openCategoryPicker(recs);
+    return;
+  }
+  // still at the place you were already working
+  const cur = currentSite();
+  if(cur && cur.lat != null && haversine(p0.lat, p0.lon, cur.lat, cur.lon) <= groupRadius()){
+    attachTo(cur.id, recs);
+    return;
+  }
+  // you have wandered back to somewhere already recorded
+  const n = nearestSite(p0.lat, p0.lon);
+  if(n && n.d <= groupRadius()){
+    attachTo(n.site.id, recs);
+    return;
+  }
+  // somewhere new
+  openCategoryPicker(recs);
 }
+
+/* ---------- the bar that says where photos are going ---------- */
+function paintRecBar(){
+  const bar = $('#recBar'); if(!bar) return;
+  if(S.forceNew){
+    $('#recName').innerHTML = '📍 The next photo starts a <b>new site</b>';
+    return;
+  }
+  const site = currentSite();
+  $('#recName').innerHTML = site
+    ? '📍 Recording to: <b>' + esc(site.name) + '</b>'
+    : '📍 No site yet — the next photo starts one';
+}
+
+function openRename(){
+  const site = currentSite();
+  if(!site){ toast('No site yet — take a photo first'); return; }
+  openSheet('<h2>Name this site</h2>' +
+    '<p class="hint" style="margin:-4px 0 14px">The name belongs to the whole group — every photo already in it, and every one you add.</p>' +
+    '<label class="f"><span>Site name</span><input type="text" id="rnName" value="' + esc(site.name) + '"></label>' +
+    '<button class="btn pri full" id="rnSave">💾 Save name</button>');
+  setTimeout(() => { const el = $('#rnName'); if(el){ el.focus(); el.select(); } }, 120);
+  $('#rnSave').onclick = async () => {
+    const v = $('#rnName').value.trim();
+    if(v){ site.name = v; site.updated = Date.now(); await dbPut('sites', site); }
+    closeSheet(); refreshAll(); paintRecBar();
+    if(v) toast('Renamed — ' + v);
+  };
+}
+
+$('#recName').onclick   = openRename;
+$('#recNew').onclick    = () => {
+  S.forceNew = true; S.currentSiteId = null; paintRecBar();
+  toast('The next photo will start a new site');
+};
+$('#stHdgCard').onclick = openCompassSheet;
 
 function openCategoryPicker(recs){
   const tiles = S.cats.map(c=>`<button class="cat" data-c="${c.id}"><span class="ic">${c.ic}</span>${esc(c.name)}</button>`).join('');
@@ -870,13 +964,30 @@ function openCategoryPicker(recs){
   };
 }
 
+/* "Cemeteries" -> "Cemetery", "Old Churches" -> "Church". Chopping a trailing
+   's' gave "Cemeterie" and "Churche". Custom categories go through this too. */
+const singular = n => String(n || '')
+  .replace(/^Old /, '')
+  .replace(/ies$/, 'y')
+  .replace(/(ch|sh|ss|x|z)es$/, '$1')
+  .replace(/([^s])s$/, '$1')
+  .trim();
+
+/* Number from the highest one already used, not from how many exist — otherwise
+   deleting "Home 2" of three makes the next one "Home 3" as well. */
+function autoName(catId){
+  const base = singular(catById(catId).name) || 'Site';
+  const re = new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' (\\d+)$');
+  let n = 1;
+  for(const s of S.sites){ const m = re.exec(s.name || ''); if(m) n = Math.max(n, (+m[1]) + 1); }
+  return base + ' ' + n;
+}
+
 async function createSite(catId, name, recs){
-  const c = catById(catId);
-  const n = S.sites.filter(s=>s.category===catId).length + 1;
   const p0 = recs.find(r=>r.lat!=null) || recs[0];
   const site = {
     id: uid(),
-    name: name || `${c.name.replace(/^Old /,'').replace(/s$/,'')} ${n}`,
+    name: name || autoName(catId),
     category: catId,
     lat: p0.lat, lon: p0.lon, acc: p0.acc, alt: p0.alt,
     heading: p0.heading,
@@ -887,7 +998,8 @@ async function createSite(catId, name, recs){
   for(const r of recs){ r.siteId = site.id; await dbPut('photos', r); }
   S.sites.unshift(site);
   S.photos.push(...recs);
-  refreshAll();
+  S.currentSiteId = site.id; S.forceNew = false;
+  refreshAll(); paintRecBar();
   toast(`Saved — ${site.name}`);
 }
 
@@ -896,8 +1008,9 @@ async function attachTo(siteId, recs){
   S.photos.push(...recs);
   const s = S.sites.find(x=>x.id===siteId);
   if(s){ s.updated = Date.now(); await dbPut('sites', s); }
-  refreshAll();
-  toast(`Added ${recs.length} photo${recs.length>1?'s':''}`);
+  S.currentSiteId = siteId; S.forceNew = false;
+  refreshAll(); paintRecBar();
+  toast(`Added ${recs.length} photo${recs.length>1?'s':''} to ${s ? s.name : 'the site'}`);
 }
 
 /* ======================================================================
@@ -1179,6 +1292,7 @@ async function openViewer(pid, siteId){
     $('#viewerBar').innerHTML = `
       <button class="btn" id="vOverlay">${showing?'🚫 Hide':'🏷 Show'} overlay</button>
       <button class="btn" id="vInfo">ℹ️ Details</button>
+      <button class="btn" id="vMove">↔ Move</button>
       <button class="btn" id="vDel">🗑</button>
       <button class="btn pri" id="vClose">Done</button>`;
     $('#vOverlay').onclick = () => { showing=!showing; render(); };
@@ -1199,6 +1313,23 @@ async function openViewer(pid, siteId){
         <div class="kv"><span class="k">File size</span><span class="v">${fmtBytes(p.size)}</span></div>
         <button class="btn full" id="pBack" style="margin-top:14px">← Back to site</button>`);
       $('#pBack').onclick = () => { closeSheet(); openSite(siteId); };
+    };
+    $('#vMove').onclick = () => {
+      v.classList.remove('on');
+      const others = S.sites.filter(x => x.id !== p.siteId);
+      openSheet('<h2>Move this photo</h2>' +
+        '<p class="hint" style="margin:-4px 0 13px">It is filed under <b>' + esc(s ? s.name : '—') + '</b>. Pick where it belongs.</p>' +
+        (others.length
+          ? others.map(o => '<button class="btn full" data-mv="' + o.id + '" style="margin-bottom:8px">' + esc(o.name) + '</button>').join('')
+          : '<p class="hint">There is nowhere else to put it yet — this is your only site.</p>') +
+        '<button class="btn full" id="mvBack" style="margin-top:10px">← Back</button>');
+      $$('#sheetcontent [data-mv]').forEach(b => b.onclick = async () => {
+        const dest = b.dataset.mv;
+        p.siteId = dest; await dbPut('photos', p);
+        closeSheet(); refreshAll(); openSite(dest);
+        toast('Moved to ' + (S.sites.find(x => x.id === dest) || {}).name);
+      });
+      $('#mvBack').onclick = () => { closeSheet(); openSite(siteId); };
     };
     $('#vDel').onclick = async () => {
       await dbDel('photos', p.id);
@@ -1397,6 +1528,7 @@ Photos are named <site-slug>-NN.jpg and referenced by the "file" column in photo
 function paintSettings(){
   $$('#v-more .tg[data-set]').forEach(t => t.classList.toggle('on', !!S.settings[t.dataset.set]));
   $('#setRecorder').value = S.settings.recordedBy || '';
+  $('#setRadius').value   = String(S.settings.groupRadius || 274);
 }
 $$('#v-more .tg[data-set]').forEach(t => t.onclick = () => {
   S.settings[t.dataset.set] = !S.settings[t.dataset.set];
@@ -1404,6 +1536,7 @@ $$('#v-more .tg[data-set]').forEach(t => t.onclick = () => {
   saveSettings();
 });
 $('#setRecorder').onchange = e => { S.settings.recordedBy = e.target.value.trim(); saveSettings(); toast('Saved'); };
+$('#setRadius').onchange   = e => { S.settings.groupRadius = +e.target.value; saveSettings(); toast('Saved'); };
 
 function paintCats(){
   $('#catManage').innerHTML = S.cats.map(c=>{
@@ -1467,8 +1600,29 @@ $('#btnDiag').onclick = () => { runDiag(); toast('Checks re-run'); };
 /* ======================================================================
    SHEET / VIEWS
    ====================================================================== */
-function openSheet(html){ $('#sheetcontent').innerHTML = html; $('#sheet').classList.add('on'); $('#sheetbody').scrollTop=0; }
-function closeSheet(){ $('#sheet').classList.remove('on'); }
+function openSheet(html){ stowCompass(); $('#sheetcontent').innerHTML = html; $('#sheet').classList.add('on'); $('#sheetbody').scrollTop=0; }
+function closeSheet(){ stowCompass(); $('#sheet').classList.remove('on'); }
+
+/* The compass card is a single long-lived element — the rose has drag handlers bound
+   to it once at startup. So we MOVE it in and out of the sheet rather than rebuild it,
+   which would silently drop those handlers. */
+function stowCompass(){
+  const c = $('#compassCard');
+  if(c && c.parentElement && c.parentElement.id === 'compassSlot') $('#compassHolder').appendChild(c);
+}
+function openCompassSheet(){
+  openSheet('<div id="compassSlot"></div><button class="btn pri full" id="cmpDone" style="margin-top:12px">Done</button>');
+  $('#compassSlot').appendChild($('#compassCard'));
+  $('#cmpDone').onclick = closeSheet;
+  if(!S.compassOn) enableCompass();
+}
+
+/* iOS will not release the magnetometer without a user gesture. Rather than make him
+   tap a button for it, the FIRST touch anywhere in the app arms it — usually invisible,
+   because iOS remembers a granted permission. */
+document.addEventListener('pointerdown', () => {
+  if(!S.compassOn && S.compassPerm !== 'denied') enableCompass(true);
+}, {once:true, capture:true});
 $('#sheet').onclick = e => { if(e.target.id==='sheet') closeSheet(); };
 
 function showView(v){
@@ -1479,7 +1633,7 @@ function showView(v){
   if(v==='more'){ paintStorage(); runDiag(); paintCats(); paintSettings(); }
 }
 $$('#tabs button').forEach(b => b.onclick = () => showView(b.dataset.v));
-$('#btnCompass').onclick = enableCompass;
+$('#btnCompass').onclick = () => enableCompass();
 $('#btnManual').onclick  = () => enableManual(true);
 $('#btnRetry').onclick   = () => { S.hdg = null; S.hdgSrc = null; S.manualHdg = false; enableCompass(); };
 $('#btnHdgHelp').onclick = () => { openSheet(`
@@ -1503,6 +1657,7 @@ $('#btnHdgHelp').onclick = () => { openSheet(`
 function refreshAll(){
   paintFilters(); paintSites(); paintStorage(); paintCats();
   if(map) paintMap();
+  paintRecBar();
   $('#kSites').textContent  = S.sites.length;
   $('#kPhotos').textContent = S.photos.length;
 }
@@ -1523,6 +1678,31 @@ function refreshAll(){
   }
   window.addEventListener('beforeunload', () => { for(const u of S.urls.values()) URL.revokeObjectURL(u); });
 })();
+
+/* ---- telling him when there is a newer version ----
+   Installed on the home screen there is no address bar and no way to force a
+   reload, and the service worker will happily keep serving the build it has.
+   So the app reads the BUILD number off the server and compares it with its own
+   — on opening, whenever iOS brings it back to the front, and every half hour it
+   is left running. A couple of hundred bytes each time. */
+function checkForUpdate(){
+  if(!navigator.onLine) return;
+  fetch('sw.js?t=' + Date.now(), {cache:'no-store'})
+    .then(r => r.ok ? r.text() : '')
+    .then(t => {
+      const m = /const BUILD = (\d+)/.exec(t);
+      if(m && +m[1] > BUILD) $('#updatebar').classList.add('on');
+    })
+    .catch(()=>{});
+}
+document.addEventListener('visibilitychange', () => { if(!document.hidden) checkForUpdate(); });
+/* pageshow fires when iOS wakes a suspended home-screen app without reloading it,
+   which is the usual way it gets reopened — visibilitychange alone can miss it. */
+window.addEventListener('pageshow', () => setTimeout(checkForUpdate, 800));
+window.addEventListener('focus', checkForUpdate);
+setTimeout(checkForUpdate, 1500);
+setInterval(checkForUpdate, 30 * 60 * 1000);
+
 </script>
 </body>
 </html>
