@@ -1,3 +1,6 @@
 .DS_Store
 Thumbs.db
 node_modules/
+
+# Claude's brief for this project - local notes, not part of the published app
+CLAUDE.md
