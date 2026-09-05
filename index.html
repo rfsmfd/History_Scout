@@ -142,6 +142,18 @@ input[type=text],input[type=number],input[type=date],select,textarea{
 }
 textarea{min-height:82px;resize:vertical;line-height:1.45}
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236A5C42' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
+details.more{margin:18px 0 0;border-top:1px solid var(--line);padding-top:4px}
+details.more > summary{
+  list-style:none;cursor:pointer;padding:13px 2px;min-height:44px;display:flex;align-items:center;gap:8px;
+  font-size:15px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink3);
+}
+details.more > summary::-webkit-details-marker{display:none}
+details.more > summary::before{content:'▸';font-size:15px;transition:transform .15s}
+details.more[open] > summary::before{transform:rotate(90deg)}
+.carried{font-size:14px;color:var(--ink3);background:var(--bg3);border:1px solid var(--line);
+  border-radius:8px;padding:9px 11px;margin:0 0 11px;line-height:1.4}
+.cnt{float:right;font-size:13px;font-weight:600;color:var(--ink3);letter-spacing:0;text-transform:none}
+.cnt.over{color:var(--bad)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{background:var(--bg3);border:1px solid var(--line);border-radius:20px;padding:11px 15px;min-height:46px;display:inline-flex;align-items:center;font-size:16px;font-weight:600}
 .chip.on{background:#F2E2BC;border-color:var(--accent);color:var(--ink)}
@@ -444,7 +456,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 4;
+const BUILD = 5;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -460,59 +472,125 @@ const DEFAULT_CATS = [
 ];
 
 /* ---------------- field schema ------------------------------------------
-   EDIT THIS ARRAY to match your two ArcGIS tables exactly. Everything
-   downstream — the detail form, the CSV columns, the GeoJSON properties —
-   is generated from it, so this is the only place you change.
-   type: text | num | area | sel | multi | date
-------------------------------------------------------------------------- */
+   This IS his MASTER_Point_Template from C:\GIS_Projects\OLD HOMES PROJECT.gdb,
+   field for field, spelled the way his geodatabase spells it — so an export drops
+   straight in with no renaming. `max` is the width of the field in ArcGIS; the
+   form enforces it, because anything longer is silently truncated on import.
+
+   Two of his fields are not in this array because they are already on the form:
+   NAMEFEATURE is the site name, and Category is the category tile. They are
+   written out under his names by TEMPLATE_ORDER below.
+
+   Everything under "More detail" is my own invention from before he showed me the
+   template. He asked for it to stay, collapsed, for anyone who wants it. It exports
+   after his columns, never mixed in among them. */
 const FIELDS = [
   {g:'Identification', f:[
-    {k:'altName',  l:'Also known as',    t:'text'},
-    {k:'siteType', l:'Specific type',    t:'text', ph:'e.g. tenant house, one-room school'},
-    {k:'county',   l:'County',           t:'text'},
-    {k:'quad',     l:'USGS quad',        t:'text'},
-    {k:'parcel',   l:'Parcel / tax ID',  t:'text'}
+    {k:'AlternateName', l:'Alternate name', t:'text', max:30},
+    {k:'HistoricName',  l:'Historic name',  t:'text', max:30},
+    {k:'FeatureType',   l:'Feature type',   t:'text', max:25,
+     ph:'tenant house, one-room school, family cemetery…'}
   ]},
-  {g:'Condition & Age', f:[
+  {g:'Dates', f:[
+    {k:'YEAR',       l:'Year', t:'text', max:255, ph:'1890 · c. 1890 · 1890–1910 — free text, as in your table'},
+    {k:'SourceDate', l:'Source date', t:'date', max:10, sticky:true}
+  ]},
+  {g:'Description', f:[
+    {k:'Description', l:'Description', t:'area', max:255},
+    {k:'NOTES',       l:'Notes',       t:'area', max:255},
+    {k:'Information', l:'Information', t:'area', max:1000,
+     ph:'The long account — what you saw, what you were told, what still needs checking.'}
+  ]},
+  /* Source1 / Source2 / Evidence / Confidence together are the tell that this is
+     research and not a building survey. They belong high on the form, not buried. */
+  {g:'Provenance', f:[
+    {k:'Source1',    l:'Source 1',  t:'text', max:50, sticky:true},
+    {k:'Source2',    l:'Source 2',  t:'text', max:50, sticky:true},
+    {k:'Evidence',   l:'Evidence',  t:'text', max:50},
+    {k:'Confidence', l:'Confidence', t:'sel', max:25, o:['','High','Medium','Low']}
+  ]},
+  {g:'Identifiers', f:[
+    {k:'DHR_Number', l:'DHR number', t:'text', max:25, ph:'Virginia Dept of Historic Resources site number'},
+    {k:'GISCORDS',   l:'GIS coords', t:'text', max:255, auto:true},
+    {k:'FeatureID',  l:'Feature ID', t:'num', ph:'left blank — ArcGIS assigns it'}
+  ]},
+
+  {g:'More detail', extra:true, collapsed:true, f:[
     {k:'condition', l:'Condition', t:'sel', o:['','Intact','Occupied','Partial / deteriorating','Ruins','Foundation only','Razed / site only','Unknown']},
-    {k:'dateBuilt', l:'Estimated date built', t:'text', ph:'e.g. 1890s, ca. 1925'},
-    {k:'dateConf',  l:'Date confidence', t:'sel', o:['','Documented','Strong estimate','Rough guess','Unknown']},
     {k:'material',  l:'Construction material', t:'multi', o:['Log','Hand-hewn timber','Frame / weatherboard','Brick','Stone','Block','Metal','Other']},
     {k:'stories',   l:'Stories', t:'sel', o:['','1','1.5','2','2.5','3+','Unknown']},
     {k:'roof',      l:'Roof type', t:'text'},
     {k:'chimneys',  l:'Chimneys', t:'num'},
-    {k:'outbuild',  l:'Outbuildings present', t:'text', ph:'barn, smokehouse, well, springhouse…'}
-  ]},
-  {g:'Cemetery Details', only:'cem', f:[
-    {k:'graveCount',  l:'Estimated graves',        t:'num'},
-    {k:'earliestYr',  l:'Earliest legible year',   t:'num'},
-    {k:'latestYr',    l:'Latest legible year',     t:'num'},
-    {k:'markerType',  l:'Marker types', t:'multi', o:['Carved stone','Fieldstone','Concrete','Metal','Wooden','Unmarked depressions']},
-    {k:'enclosure',   l:'Enclosure', t:'sel', o:['','None','Stone wall','Iron fence','Wire fence','Wood fence','Hedge']},
-    {k:'maintained',  l:'Maintenance', t:'sel', o:['','Actively maintained','Occasional','Abandoned / overgrown']}
-  ]},
-  {g:'Access & Ownership', f:[
+    {k:'outbuild',  l:'Outbuildings present', t:'text', ph:'barn, smokehouse, well, springhouse…'},
+    {k:'county',    l:'County',          t:'text', sticky:true},
+    {k:'quad',      l:'USGS quad',       t:'text'},
+    {k:'parcel',    l:'Parcel / tax ID', t:'text'},
     {k:'access',    l:'Access', t:'sel', o:['','Public land','Public road right-of-way','Private — permission granted','Private — permission needed','Private — no permission','Unknown']},
     {k:'owner',     l:'Landowner', t:'text'},
     {k:'ownerInfo', l:'Owner contact', t:'text'},
-    {k:'approach',  l:'How to get there', t:'area', ph:'Gate at the end of Cedar Hollow, walk the old roadbed ~400 yds NE.'}
-  ]},
-  {g:'Threats', f:[
+    {k:'approach',  l:'How to get there', t:'area', ph:'Gate at the end of Cedar Hollow, walk the old roadbed ~400 yds NE.'},
     {k:'threats',   l:'Threats observed', t:'multi', o:['Development','Erosion','Vegetation / trees','Vandalism','Neglect / collapse','Logging','Flooding','Livestock','ATV traffic']},
-    {k:'urgency',   l:'Documentation urgency', t:'sel', o:['','Routine','Should revisit','Urgent — losing it']}
-  ]},
-  {g:'Research', f:[
-    {k:'sources',   l:'Sources consulted', t:'multi', o:['Deed record','Old map / atlas','Census','Oral history','Newspaper','Cemetery survey','Family record','None yet']},
+    {k:'urgency',   l:'Documentation urgency', t:'sel', o:['','Routine','Should revisit','Urgent — losing it']},
     {k:'families',  l:'Associated families / names', t:'area'},
-    {k:'narrative', l:'Notes & significance', t:'area', ph:'What you saw, what you were told, what still needs checking.'},
     {k:'followup',  l:'Follow-up needed', t:'area'}
   ]},
-  {g:'Record', f:[
-    {k:'recordedBy', l:'Recorded by', t:'text'},
+
+  {g:'Cemetery detail', only:'cem', extra:true, collapsed:true, f:[
+    {k:'graveCount', l:'Estimated graves',      t:'num'},
+    {k:'earliestYr', l:'Earliest legible year', t:'num'},
+    {k:'latestYr',   l:'Latest legible year',   t:'num'},
+    {k:'markerType', l:'Marker types', t:'multi', o:['Carved stone','Fieldstone','Concrete','Metal','Wooden','Unmarked depressions']},
+    {k:'enclosure',  l:'Enclosure', t:'sel', o:['','None','Stone wall','Iron fence','Wire fence','Wood fence','Hedge']},
+    {k:'maintained', l:'Maintenance', t:'sel', o:['','Actively maintained','Occasional','Abandoned / overgrown']}
+  ]},
+
+  {g:'Record', extra:true, collapsed:true, f:[
+    {k:'recordedBy', l:'Recorded by', t:'text', sticky:true},
     {k:'status',     l:'Record status', t:'sel', o:['Draft','Field-verified','Documented','Ready to submit']},
     {k:'tags',       l:'Tags', t:'text', ph:'comma separated'}
   ]}
 ];
+
+/* His template's column order, exactly. Exports lead with these. */
+const TEMPLATE_ORDER = ['NAMEFEATURE','AlternateName','HistoricName','Description','NOTES','Information',
+  'YEAR','SourceDate','Category','FeatureType','Source1','Source2','Evidence','Confidence',
+  'DHR_Number','GISCORDS','FeatureID'];
+
+/* He pastes GISCORDS in from wherever, so the format drifts. The app writes one
+   consistent decimal pair — his call, 2026-09-05 — and leaves it editable. */
+const gisCords = (lat, lon) => (lat == null || lon == null) ? '' : lat.toFixed(6) + ', ' + lon.toFixed(6);
+
+/* Value for one of his template columns, wherever it actually lives. */
+function templateValue(site, key){
+  if(key === 'NAMEFEATURE') return site.name ?? '';
+  if(key === 'Category')    return catById(site.category).name;
+  if(key === 'GISCORDS')    return site.fields.GISCORDS || gisCords(site.lat, site.lon);
+  return site.fields[key] ?? '';
+}
+
+/* Only what is genuinely constant across a day of recording carries forward: the
+   document being worked from, its date, the county, his name.
+
+   NOT FeatureType, Evidence or Confidence. Those are judgements about one
+   particular site, and carrying them silently put "church" and "standing
+   structure" onto a cemetery record in testing — which would have reached his
+   geodatabase looking like data he had entered. Carried values are also marked
+   on the form, so nothing arrives unannounced. */
+const stickyKeys = () => FIELDS.flatMap(g => g.f).filter(f => f.sticky).map(f => f.k);
+
+/* Read through the current list, not straight out of storage — settings saved before
+   a field stopped being sticky would otherwise keep seeding new records forever. */
+function carriedFields(){
+  const src = S.settings.sticky || {}, out = {};
+  for(const k of stickyKeys()){ if(src[k]) out[k] = src[k]; }
+  return out;
+}
+function rememberSticky(site){
+  const keep = {};
+  for(const k of stickyKeys()){ const v = site.fields[k]; if(v) keep[k] = v; }
+  S.settings.sticky = keep;
+  saveSettings();
+}
 
 /* ---------------- tiny helpers ---------------- */
 const $  = s => document.querySelector(s);
@@ -588,7 +666,7 @@ const S = {
   filter: 'all',
   currentSiteId: null,   // where photos are landing right now
   forceNew: false,       // you pressed "+ New" — the next photo starts a fresh site
-  settings: {stampExport:true, stampView:true, downscale:true, grouping:true, groupRadius:274, recordedBy:''},
+  settings: {stampExport:true, stampView:true, downscale:true, grouping:true, groupRadius:274, recordedBy:'', sticky:{}},
   urls: new Map()            // photoId -> objectURL cache
 };
 const catById = id => S.cats.find(c=>c.id===id) || {id:'other', name:'Other', ic:'📍', color:'#7A8288'};
@@ -992,7 +1070,10 @@ async function createSite(catId, name, recs){
     lat: p0.lat, lon: p0.lon, acc: p0.acc, alt: p0.alt,
     heading: p0.heading,
     created: Date.now(), updated: Date.now(),
-    fields: {recordedBy: S.settings.recordedBy || '', status: 'Draft'}
+    fields: {...carriedFields(),
+             recordedBy: (S.settings.sticky || {}).recordedBy || S.settings.recordedBy || '',
+             GISCORDS: gisCords(p0.lat, p0.lon),
+             status: 'Draft'}
   };
   await dbPut('sites', site);
   for(const r of recs){ r.siteId = site.id; await dbPut('photos', r); }
@@ -1165,17 +1246,25 @@ function openSite(id){
         return `<label class="f"><span>${esc(f.l)}</span><div class="chips" data-multi="${f.k}">${
           f.o.map(o=>`<button type="button" class="chip ${cur.includes(o)?'on':''}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div></label>`;
       }
+      // his geodatabase truncates silently at the field width, so cap it here
+      const cap = f.max ? ` maxlength="${f.max}"` : '';
+      const cnt = f.max && (f.t==='area' || f.max>=50)
+        ? `<span class="cnt" id="c_${f.k}">${String(v).length}/${f.max}</span>` : '';
       if(f.t==='area')
-        return `<label class="f"><span>${esc(f.l)}</span><textarea id="${id2}" data-k="${f.k}" placeholder="${esc(f.ph||'')}">${esc(v)}</textarea></label>`;
-      return `<label class="f"><span>${esc(f.l)}</span><input type="${f.t==='num'?'number':f.t==='date'?'date':'text'}" id="${id2}" data-k="${f.k}" value="${esc(v)}" placeholder="${esc(f.ph||'')}"></label>`;
+        return `<label class="f"><span>${esc(f.l)}${cnt}</span><textarea id="${id2}" data-k="${f.k}"${cap} placeholder="${esc(f.ph||'')}">${esc(v)}</textarea></label>`;
+      return `<label class="f"><span>${esc(f.l)}${cnt}</span><input type="${f.t==='num'?'number':f.t==='date'?'date':'text'}" id="${id2}" data-k="${f.k}"${cap} value="${esc(v)}" placeholder="${esc(f.ph||'')}"></label>`;
     }).join('');
-    return `<div class="sec-h">${esc(g.g)}</div>${rows}`;
+    const carried = g.f.some(f=>f.sticky) && Object.keys(carriedFields()).length
+      ? '<p class="carried">Carried over from your last record. Change anything that differs.</p>' : '';
+    return g.collapsed
+      ? `<details class="more"><summary>${esc(g.g)}</summary>${carried}${rows}</details>`
+      : `<div class="sec-h">${esc(g.g)}</div>${carried}${rows}`;
   }).join('');
 
   openSheet(`
     <h2>${c.ic} <span id="siteTitle">${esc(s.name)}</span></h2>
 
-    <label class="f"><span>Site name</span><input type="text" id="f_name" value="${esc(s.name)}"></label>
+    <label class="f"><span>Name of feature</span><input type="text" id="f_name" maxlength="255" value="${esc(s.name)}"></label>
     <label class="f"><span>Category</span><select id="f_cat">${
       S.cats.map(x=>`<option value="${x.id}" ${x.id===s.category?'selected':''}>${x.ic} ${esc(x.name)}</option>`).join('')}</select></label>
 
@@ -1210,6 +1299,15 @@ function openSite(id){
       <button class="btn danger" id="delSite">🗑 Delete site</button>
     </div>
   `);
+
+  // live character counters, so a 260-character Description is caught here and not
+  // silently chopped when it reaches ArcGIS
+  $$('#sheetcontent [data-k]').forEach(el => {
+    const c = $('#c_' + el.dataset.k); if(!c) return;
+    const max = +el.getAttribute('maxlength');
+    const paint = () => { c.textContent = el.value.length + '/' + max; c.classList.toggle('over', el.value.length >= max); };
+    el.oninput = paint; paint();
+  });
 
   // multi-select chips
   $$('#sheetcontent [data-multi] .chip').forEach(b => b.onclick = () => b.classList.toggle('on'));
@@ -1250,12 +1348,19 @@ function openSite(id){
     $$('#sheetcontent [data-multi]').forEach(box => {
       s.fields[box.dataset.multi] = [...box.querySelectorAll('.chip.on')].map(c=>c.dataset.v).join(', ');
     });
+    if(!s.fields.GISCORDS) s.fields.GISCORDS = gisCords(s.lat, s.lon);
     s.updated = Date.now();
     await dbPut('sites', s);
+    rememberSticky(s);
     refreshAll(); closeSheet(); toast('Saved');
   };
 
   $('#mapSite').onclick = () => { closeSheet(); showView('map'); setTimeout(()=>focusSite(s), 260); };
+
+  /* GISCORDS is text, so it does not follow the geometry on its own. If the position
+     changes, the text has to be rewritten or the two quietly disagree. */
+  const gisField = $('#f_GISCORDS');
+  if(gisField && !gisField.value) gisField.value = gisCords(s.lat, s.lon);
 
   $('#delSite').onclick = () => {
     openSheet(`<h2>Delete ${esc(s.name)}?</h2>
@@ -1408,19 +1513,25 @@ function focusSite(s){
 /* ======================================================================
    EXPORT
    ====================================================================== */
-function allFieldDefs(){ return FIELDS.flatMap(g=>g.f); }
+
+/* His 17 template columns come first, named exactly as his geodatabase names them,
+   so the file drops in without renaming anything. Everything the app adds — position,
+   photo counts, my own invented fields — follows after, where it can be ignored. */
+function extraFieldDefs(){ return FIELDS.filter(g=>g.extra).flatMap(g=>g.f); }
 
 function csvSites(){
-  const defs = allFieldDefs();
-  const head = ['site_id','name','category','latitude','longitude','accuracy_m','elevation_ft','facing_deg','facing_cardinal',
-                'photo_count','first_recorded_iso','last_updated_iso', ...defs.map(f=>f.k)];
+  const extra = extraFieldDefs();
+  const head = [...TEMPLATE_ORDER,
+                'site_id','latitude','longitude','accuracy_m','elevation_ft',
+                'facing_deg','facing_cardinal','photo_count','first_recorded_iso','last_updated_iso',
+                ...extra.map(f=>f.k)];
   const rows = S.sites.map(s=>{
     const ph = photosOf(s.id);
-    return [s.id, s.name, catById(s.category).name,
-      s.lat??'', s.lon??'', s.acc!=null?s.acc.toFixed(1):'', s.alt!=null?Math.round(s.alt*3.28084):'',
+    return [...TEMPLATE_ORDER.map(k=>templateValue(s,k)),
+      s.id, s.lat??'', s.lon??'', s.acc!=null?s.acc.toFixed(1):'', s.alt!=null?Math.round(s.alt*3.28084):'',
       s.heading!=null?s.heading.toFixed(0):'', s.heading!=null?cardinal(s.heading):'',
       ph.length, new Date(s.created).toISOString(), new Date(s.updated).toISOString(),
-      ...defs.map(f=>s.fields[f.k]??'')];
+      ...extra.map(f=>s.fields[f.k]??'')];
   });
   return toCSV([head,...rows]);
 }
@@ -1446,18 +1557,21 @@ function toCSV(rows){
   }).join(',')).join('\r\n');
 }
 function geojson(){
-  const defs = allFieldDefs();
+  const extra = extraFieldDefs();
   return JSON.stringify({
     type:'FeatureCollection',
     features: S.sites.filter(s=>s.lat!=null).map(s=>({
       type:'Feature',
       geometry:{type:'Point', coordinates:[s.lon, s.lat, s.alt??0]},
       properties:{
-        site_id:s.id, name:s.name, category:catById(s.category).name,
+        // his template first, spelled his way
+        ...Object.fromEntries(TEMPLATE_ORDER.map(k=>[k, templateValue(s,k) === '' ? null : templateValue(s,k)])),
+        // then what the app knows that his template has no column for
+        site_id:s.id,
         accuracy_m:s.acc??null, facing_deg:s.heading??null, facing_cardinal:s.heading!=null?cardinal(s.heading):null,
         photo_count:photosOf(s.id).length,
         first_recorded:new Date(s.created).toISOString(), last_updated:new Date(s.updated).toISOString(),
-        ...Object.fromEntries(defs.map(f=>[f.k, s.fields[f.k]??null]))
+        ...Object.fromEntries(extra.map(f=>[f.k, s.fields[f.k]??null]))
       }
     }))
   }, null, 2);
