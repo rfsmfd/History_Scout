@@ -5,7 +5,7 @@
      - libraries + map tiles: CACHE FIRST
        => tiles you've already looked at keep working with no signal
    Bump BUILD to match index.html when you ship.  */
-const BUILD = 6;
+const BUILD = 7;
 const APP   = 'hs-app-v' + BUILD;
 const LIB   = 'hs-lib-v1';
 const TILES = 'hs-tiles-v1';
@@ -59,17 +59,8 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   // 1. the app shell — network first
-  if (isAppItself(req, url)) {
-    e.respondWith(
-      fetch(req)
-        .then(res => {
-          // store under both keys, so whichever way the app is opened next finds it
-          const a = res.clone(), b = res.clone();
-          caches.open(APP).then(c => { c.put('./', a); c.put('./index.html', b); });
-          return res;
-        })
-        .catch(() => caches.match('./').then(r => r || caches.match('./index.html')))
-    );
+  if (isAppItself) {
+    e.respondWith(shellResponse(req));
     return;
   }
 
@@ -94,6 +85,49 @@ self.addEventListener('fetch', e => {
     e.respondWith(cacheFirst(req, APP));
   }
 });
+
+/* The app itself: try the network, but do not wait forever for it.
+
+   Straight network-first hangs on marginal signal — a bar or two is enough to keep
+   the connection trying and never complete, and the app simply never opens. That is
+   a real field failure, not a theoretical one: it is why Outdoor Companion grew this
+   same 2-second rule, and it is copied from there.
+
+   With signal: the network almost always wins the race, so a new build appears at
+   once. Without it, or on one bar: the saved copy is served immediately and the app
+   opens. Either way the network fetch, whenever it finally finishes, still refreshes
+   the cache for next time. */
+const SHELL_TIMEOUT = 2000;
+
+function shellResponse(req) {
+  return caches.match('./')
+    .then(hit => hit || caches.match('./index.html'))
+    .then(cached => {
+      const network = fetch(req, { cache: 'no-store' })
+        .then(res => {
+          if (res && res.ok) {
+            const a = res.clone(), b = res.clone();
+            caches.open(APP).then(c => { c.put('./', a); c.put('./index.html', b); });
+            return res;
+          }
+          // a 404 or a 500 is not worth replacing a good saved copy with
+          return cached ? null : res;
+        })
+        .catch(() => null);
+
+      // nothing saved yet — the network is the only option, however long it takes
+      if (!cached) {
+        return network.then(res => res || fetch(req)
+          .catch(() => new Response('History Scout is offline and has nothing saved yet.',
+            { status: 503, headers: { 'Content-Type': 'text/plain' } })));
+      }
+
+      return Promise.race([
+        network,
+        new Promise(r => setTimeout(() => r(null), SHELL_TIMEOUT))
+      ]).then(res => res || cached);
+    });
+}
 
 function cacheFirst(req, cacheName, cap) {
   return caches.match(req).then(hit => {
