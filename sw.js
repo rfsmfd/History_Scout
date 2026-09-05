@@ -5,7 +5,7 @@
      - libraries + map tiles: CACHE FIRST
        => tiles you've already looked at keep working with no signal
    Bump BUILD to match index.html when you ship.  */
-const BUILD = 5;
+const BUILD = 6;
 const APP   = 'hs-app-v' + BUILD;
 const LIB   = 'hs-lib-v1';
 const TILES = 'hs-tiles-v1';
@@ -26,9 +26,32 @@ self.addEventListener('activate', e => {
       .then(keys => Promise.all(
         keys.filter(k => k.startsWith('hs-app-') && k !== APP).map(k => caches.delete(k))
       ))
+      // Update checks used to be cached, one entry per check, forever. Clear them out.
+      .then(() => caches.open(APP).then(c => c.keys().then(reqs =>
+        Promise.all(reqs.filter(r => r.url.includes('sw.js')).map(r => c.delete(r)))
+      )))
       .then(() => self.clients.claim())
   );
 });
+
+/* What counts as "the app itself".
+
+   This used to be only `mode === 'navigate'` or a path ending in .html — and that
+   left a hole big enough to strand the app permanently. The home screen icon opens
+   the bare directory URL ("…/History_Scout/"), which ends in a slash, not in .html.
+   When that request did not arrive flagged as a navigation it fell through to rule 4
+   and was served cache-first, so the installed app kept handing back whatever build
+   it first saw while Safari, asking a slightly different way, updated normally.
+
+   That is exactly what happened between BUILD 4 and BUILD 5: Safari showed 5, the
+   home screen icon sat on 4 and no amount of reopening moved it. Reproduced here
+   before fixing: fetch('./') returned the old build while fetch('./index.html')
+   returned the new one. */
+const isAppItself = (req, url) =>
+  req.mode === 'navigate' ||
+  req.destination === 'document' ||
+  (url.origin === location.origin &&
+    (url.pathname.endsWith('.html') || url.pathname.endsWith('/')));
 
 self.addEventListener('fetch', e => {
   const req = e.request;
@@ -36,12 +59,13 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   // 1. the app shell — network first
-  if (req.mode === 'navigate' || (url.origin === location.origin && url.pathname.endsWith('.html'))) {
+  if (isAppItself(req, url)) {
     e.respondWith(
       fetch(req)
         .then(res => {
-          const copy = res.clone();
-          caches.open(APP).then(c => c.put('./', copy));
+          // store under both keys, so whichever way the app is opened next finds it
+          const a = res.clone(), b = res.clone();
+          caches.open(APP).then(c => { c.put('./', a); c.put('./index.html', b); });
           return res;
         })
         .catch(() => caches.match('./').then(r => r || caches.match('./index.html')))
@@ -63,6 +87,10 @@ self.addEventListener('fetch', e => {
 
   // 4. same-origin assets — cache first
   if (url.origin === location.origin) {
+    /* Never cache sw.js. It is how the app asks "is there a newer build?", so a
+       cached answer is worse than useless — and every check carries a unique
+       ?t= value, so caching them just piles up entries nothing ever reads. */
+    if (url.pathname.endsWith('sw.js')) return;
     e.respondWith(cacheFirst(req, APP));
   }
 });

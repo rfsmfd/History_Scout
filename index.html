@@ -387,6 +387,16 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       </div>
 
       <div class="card">
+        <h3>Version</h3>
+        <div class="kv"><span class="k">This copy</span><span class="v" id="vLocal">—</span></div>
+        <div class="kv"><span class="k">On the server</span><span class="v" id="vServer">not checked yet</span></div>
+        <button class="btn full" id="btnCheckUpd" style="margin-top:10px">↻ Check for updates now</button>
+        <p class="hint" style="margin:11px 0 0">If this copy is behind and stays behind, use Reinstall. It clears
+        the offline copy of the app and fetches a fresh one. <b>Your saved sites and photos are not touched.</b></p>
+        <button class="btn full" id="btnReinstall" style="margin-top:9px">🧹 Reinstall the app</button>
+      </div>
+
+      <div class="card">
         <h3>Diagnostics</h3>
         <div id="diag"></div>
         <button class="btn full" id="btnDiag" style="margin-top:10px">↻ Re-run checks</button>
@@ -456,7 +466,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 5;
+const BUILD = 6;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -1651,6 +1661,8 @@ $$('#v-more .tg[data-set]').forEach(t => t.onclick = () => {
 });
 $('#setRecorder').onchange = e => { S.settings.recordedBy = e.target.value.trim(); saveSettings(); toast('Saved'); };
 $('#setRadius').onchange   = e => { S.settings.groupRadius = +e.target.value; saveSettings(); toast('Saved'); };
+$('#btnCheckUpd').onclick  = checkNow;
+$('#btnReinstall').onclick = reinstallApp;
 
 function paintCats(){
   $('#catManage').innerHTML = S.cats.map(c=>{
@@ -1744,7 +1756,7 @@ function showView(v){
   $('#v-'+v).classList.add('on');
   $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   if(v==='map'){ initMap(); setTimeout(()=>{ map.invalidateSize(); paintMap(); }, 60); }
-  if(v==='more'){ paintStorage(); runDiag(); paintCats(); paintSettings(); }
+  if(v==='more'){ paintStorage(); runDiag(); paintCats(); paintSettings(); paintVersion(); }
 }
 $$('#tabs button').forEach(b => b.onclick = () => showView(b.dataset.v));
 $('#btnCompass').onclick = () => enableCompass();
@@ -1799,6 +1811,63 @@ function refreshAll(){
    So the app reads the BUILD number off the server and compares it with its own
    — on opening, whenever iOS brings it back to the front, and every half hour it
    is left running. A couple of hundred bytes each time. */
+
+/* ---- the Version card ----
+   BUILD 4 shipped with a service worker that served the app's own front door
+   cache-first, so an installed copy could sit on an old build forever while
+   Safari updated normally. BUILD 6 fixes that, but the lesson is that he should
+   never again depend on the app noticing by itself — hence a button he can press
+   and a way out that does not mean deleting the icon. */
+async function serverBuild(){
+  const r = await fetch('sw.js?t=' + Date.now(), {cache:'no-store'});
+  if(!r.ok) throw new Error('server said ' + r.status);
+  const m = /const BUILD = (\d+)/.exec(await r.text());
+  if(!m) throw new Error('could not read the build number');
+  return +m[1];
+}
+
+function paintVersion(){
+  const el = $('#vLocal'); if(el) el.textContent = 'BUILD ' + BUILD;
+}
+
+async function checkNow(){
+  const out = $('#vServer');
+  if(out) out.textContent = 'checking…';
+  try{
+    const n = await serverBuild();
+    if(out) out.textContent = 'BUILD ' + n;
+    if(n > BUILD){
+      $('#updatebar').classList.add('on');
+      toast('BUILD ' + n + ' is available — tap the banner at the top', 3600);
+    } else {
+      toast('You are on the newest build');
+    }
+  }catch(err){
+    if(out) out.textContent = 'could not reach the server';
+    toast('Could not check — ' + err.message, 3200);
+  }
+}
+
+/* Clears the offline copy of the APP only. Sites and photos live in IndexedDB,
+   which this does not touch — worth saying plainly on the button, because
+   "clear everything" is exactly what it sounds like it might do. */
+async function reinstallApp(){
+  openSheet('<h2>Reinstall the app?</h2>' +
+    '<p class="hint" style="margin:-4px 0 15px">This throws away the offline copy of the app and fetches a fresh one from the server. ' +
+    'Use it if this copy is stuck on an old build.<br><br><b>Your recorded sites and photos are not affected.</b></p>' +
+    '<button class="btn pri full" id="riYes" style="margin-bottom:9px">🧹 Yes, fetch a fresh copy</button>' +
+    '<button class="btn full" id="riNo">Cancel</button>');
+  $('#riNo').onclick = closeSheet;
+  $('#riYes').onclick = async () => {
+    try{
+      for(const k of await caches.keys()){ if(k.startsWith('hs-')) await caches.delete(k); }
+      if('serviceWorker' in navigator){
+        for(const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+      }
+    }catch(err){ /* nothing useful to do — the reload below is still worth trying */ }
+    location.replace('index.html?fresh=' + Date.now());
+  };
+}
 function checkForUpdate(){
   if(!navigator.onLine) return;
   fetch('sw.js?t=' + Date.now(), {cache:'no-store'})
