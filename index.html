@@ -117,6 +117,18 @@ button{background:none;border:0;cursor:pointer}
 .card{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:12px}
 .card h3{margin:0 0 9px;font-size:16px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink2)}
 .hint{font-size:16px;color:var(--ink3);line-height:1.45}
+/* BUILD 10: see the photo just taken, big enough to judge it */
+.lastshot .ls-img{display:block;width:100%;padding:0;border:0;background:#0c0a08;border-radius:10px;overflow:hidden;cursor:zoom-in}
+.lastshot .ls-img img{display:block;width:100%;max-height:56vh;object-fit:contain}
+.lastshot .ls-cap{margin:9px 2px 10px;font-size:15px;color:var(--ink2);line-height:1.4}
+.lastshot .btn{min-height:48px}
+.btn.armed{background:var(--bad);color:#FFF6E4;border-color:var(--bad)}
+.pick-shot{display:block;width:100%;max-height:34vh;object-fit:contain;border-radius:10px;background:#0c0a08;margin:0 0 10px}
+.pick-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 14px}
+.pick-row .hint{font-size:15px}
+.pick-row .btn{flex:0 0 auto;min-height:46px}
+#viewer .im{touch-action:none}
+#viewer img{transform-origin:0 0;will-change:transform}
 
 /* ---------- compass ---------- */
 #rose{width:150px;height:150px;margin:4px auto 8px;display:block;touch-action:none}
@@ -289,6 +301,16 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       <div class="cap-row">
         <button class="bigbtn" id="btnCam"><span class="ic">📷</span>Capture Site</button>
         <button class="bigbtn sec" id="btnLib"><span class="ic">🖼</span>From<br>Library</button>
+      </div>
+
+      <div class="card lastshot" id="lastShot" hidden>
+        <h3>Your last photo</h3>
+        <button class="ls-img" id="lsOpen" aria-label="Open your last photo full screen"><img id="lsImg" alt="Your last photo"></button>
+        <p class="ls-cap" id="lsCap"></p>
+        <div class="btnrow">
+          <button class="btn" id="lsZoom">🔍 Check sharpness</button>
+          <button class="btn danger" id="lsDel">🗑 Delete and retake</button>
+        </div>
       </div>
 
       <div class="card">
@@ -466,7 +488,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 9;
+const BUILD = 10;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -997,6 +1019,127 @@ async function processPhoto(file){
 }
 
 $('#btnCam').onclick = () => $('#fileCam').click();
+
+/* ---------- see the photo just taken ----------
+   His words: "the thumbnails are so small that it's hard to tell if it's a good clear picture."
+   The newest photo sits large on the Capture screen. "Check sharpness" opens it already zoomed in on
+   the full-size original; "Delete and retake" takes two taps, then opens the camera, and the
+   retake joins the same site. Nothing here adds a step when the photo is good. */
+function paintLastShot(){
+  const card = $('#lastShot'); if(!card) return;
+  const p = S.photos.reduce((a, b) => (!a || (b.takenAt || 0) > (a.takenAt || 0)) ? b : a, null);
+  if(!p){ card.hidden = true; S.lastShotId = null; return; }
+  card.hidden = false;
+  if(S.lastShotId !== p.id){ $('#lsImg').src = photoURL(p); S.lastShotId = p.id; }
+  const st = S.sites.find(x => x.id === p.siteId);
+  $('#lsCap').textContent = (st ? st.name : 'Not filed yet') + '  ·  ' + fmtTime(p.takenAt) + '  ·  ' + sizeLabel(p);
+}
+$('#lsOpen').onclick = () => { const p = S.photos.find(x => x.id === S.lastShotId); if(p) openViewer(p.id, p.siteId); };
+$('#lsZoom').onclick = () => { const p = S.photos.find(x => x.id === S.lastShotId); if(p){ openViewer(p.id, p.siteId); vzZoomFull(); } };
+$('#lsDel').onclick = async () => {
+  const btn = $('#lsDel');
+  const idle = () => { btn.classList.remove('armed'); btn.textContent = '🗑 Delete and retake'; };
+  if(!btn.classList.contains('armed')){
+    btn.classList.add('armed'); btn.textContent = 'Tap again to delete';
+    clearTimeout(btn._t); btn._t = setTimeout(idle, 3000);
+    return;
+  }
+  clearTimeout(btn._t);
+  const p = S.photos.find(x => x.id === S.lastShotId);
+  if(!p){ idle(); return; }
+  $('#fileCam').click();                          // first, while the tap still counts: iPhones only open the camera from a tap
+  await dbDel('photos', p.id);
+  const u = S.urls.get(p.id); if(u){ URL.revokeObjectURL(u); S.urls.delete(p.id); }
+  S.photos = S.photos.filter(x => x.id !== p.id);
+  if(p.siteId){ S.currentSiteId = p.siteId; S.forceNew = false; }   // the retake joins the same site
+  idle(); refreshAll();
+  toast('Deleted — take it again');
+};
+
+/* ---------- pinch and double-tap zoom in the viewer ----------
+   The whole app blocks browser zoom so buttons stay put in the field, so the viewer zooms itself.
+   Zooming past the fit swaps the 1,600-pixel screen copy for the full-size original, so sharpness
+   is judged on the real pixels. Double-tap goes to full detail (one photo pixel per screen pixel)
+   and back. */
+const VZ_MAX = 8;
+const VZ = { s: 1, x: 0, y: 0, pts: new Map(), start: null, lastTap: 0, fullURL: null, photo: null, restoreSrc: null };
+const vzImg = () => $('#viewerImg');
+function vzApply(){ vzImg().style.transform = 'translate(' + VZ.x + 'px,' + VZ.y + 'px) scale(' + VZ.s + ')'; }
+function vzClamp(W, H){ VZ.x = Math.min(0, Math.max(W - W * VZ.s, VZ.x)); VZ.y = Math.min(0, Math.max(H - H * VZ.s, VZ.y)); }
+function vzReset(){
+  VZ.s = 1; VZ.x = 0; VZ.y = 0; VZ.start = null; vzImg().style.transform = '';
+  if(VZ.restoreSrc){ vzImg().src = VZ.restoreSrc; VZ.restoreSrc = null; }
+}
+function vzOpen(p){
+  VZ.restoreSrc = null; VZ.pts.clear(); vzReset();
+  if(VZ.fullURL){ URL.revokeObjectURL(VZ.fullURL); VZ.fullURL = null; }
+  VZ.photo = p;
+}
+function vzUseOriginal(){
+  if(!VZ.photo || VZ.restoreSrc) return;
+  const o = origFile(VZ.photo); if(!o || !o.blob) return;
+  if(!VZ.fullURL) VZ.fullURL = URL.createObjectURL(o.blob);
+  VZ.restoreSrc = vzImg().src; vzImg().src = VZ.fullURL;
+}
+function vzToggle(pt){
+  const im = vzImg();
+  if(VZ.s > 1.05){ vzReset(); return; }
+  const Lf = im.offsetLeft, T = im.offsetTop, W = im.offsetWidth, H = im.offsetHeight;
+  if(!W) return;
+  const k = Math.min(VZ_MAX, Math.max(2, ((VZ.photo && VZ.photo.w) || im.naturalWidth) / W / (window.devicePixelRatio || 1)));
+  const ux = (pt.x - Lf - VZ.x) / VZ.s, uy = (pt.y - T - VZ.y) / VZ.s;
+  VZ.s = k; VZ.x = pt.x - Lf - ux * k; VZ.y = pt.y - T - uy * k;
+  vzClamp(W, H); vzApply(); vzUseOriginal();
+}
+async function vzZoomFull(){
+  const im = vzImg();
+  /* Wait for the picture itself, not a timer loop: a phone slows timers right down when it is busy
+     or in the background, and a polling loop could leave the zoom hanging. */
+  if(!(im.complete && im.naturalWidth)){
+    await new Promise(r => { im.addEventListener('load', r, { once: true }); im.addEventListener('error', r, { once: true }); setTimeout(r, 2000); });
+  }
+  if(im.offsetWidth) vzToggle({ x: im.offsetLeft + im.offsetWidth / 2, y: im.offsetTop + im.offsetHeight / 2 });
+}
+(function viewerZoom(){
+  const box = $('#viewer .im');
+  const at = e => ({ x: e.clientX, y: e.clientY });
+  box.addEventListener('pointerdown', e => {
+    if(box.setPointerCapture) try{ box.setPointerCapture(e.pointerId); }catch(err){}
+    VZ.pts.set(e.pointerId, at(e));
+    if(VZ.pts.size === 2){
+      const [a, b] = [...VZ.pts.values()];
+      VZ.start = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, s: VZ.s, x: VZ.x, y: VZ.y };
+    } else if(VZ.pts.size === 1){
+      const now = Date.now();
+      if(now - VZ.lastTap < 320){ vzToggle(at(e)); VZ.lastTap = 0; } else VZ.lastTap = now;
+      VZ.start = { p: at(e), x: VZ.x, y: VZ.y };
+    }
+  });
+  box.addEventListener('pointermove', e => {
+    if(!VZ.pts.has(e.pointerId)) return;
+    VZ.pts.set(e.pointerId, at(e));
+    const im = vzImg(), Lf = im.offsetLeft, T = im.offsetTop, W = im.offsetWidth, H = im.offsetHeight;
+    if(VZ.pts.size === 2 && VZ.start && VZ.start.d){
+      const [a, b] = [...VZ.pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y), m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const s2 = Math.min(VZ_MAX, Math.max(1, VZ.start.s * d / VZ.start.d));
+      const ux = (VZ.start.m.x - Lf - VZ.start.x) / VZ.start.s, uy = (VZ.start.m.y - T - VZ.start.y) / VZ.start.s;
+      VZ.s = s2; VZ.x = m.x - Lf - ux * s2; VZ.y = m.y - T - uy * s2;
+      vzClamp(W, H); vzApply();
+      if(VZ.s > 1.05) vzUseOriginal();
+    } else if(VZ.pts.size === 1 && VZ.s > 1 && VZ.start && VZ.start.p){
+      VZ.x = VZ.start.x + (e.clientX - VZ.start.p.x); VZ.y = VZ.start.y + (e.clientY - VZ.start.p.y);
+      vzClamp(W, H); vzApply();
+    }
+  });
+  const end = e => {
+    VZ.pts.delete(e.pointerId);
+    if(VZ.pts.size === 1){ const p = [...VZ.pts.values()][0]; VZ.start = { p: p, x: VZ.x, y: VZ.y }; }
+    else if(VZ.pts.size === 0){ VZ.start = null; if(VZ.s <= 1.05 && VZ.s !== 1) vzReset(); }
+  };
+  box.addEventListener('pointerup', end);
+  box.addEventListener('pointercancel', end);
+})();
 $('#btnLib').onclick = () => $('#fileLib').click();
 $('#fileCam').onchange = e => intake([...e.target.files], e.target);
 $('#fileLib').onchange = e => intake([...e.target.files], e.target);
@@ -1008,6 +1151,7 @@ async function intake(files, input){
     const recs = [];
     for(const f of files) recs.push(await processPhoto(f));
     if(input) input.value = '';
+    recs.from = (input && input.id === 'fileCam') ? 'camera' : 'library';
     routeRecs(recs);
   }catch(err){
     console.error(err);
@@ -1084,8 +1228,18 @@ $('#recNew').onclick    = () => {
 $('#stHdgCard').onclick = openCompassSheet;
 
 function openCategoryPicker(recs){
+  /* Show the photo just taken, big, while the category is picked — a blurry one can be retaken
+     before it is ever saved. */
+  const first = recs[0] || {};
+  const shotURL = first.display ? URL.createObjectURL(first.display) : '';
+  const fromCam = recs.from === 'camera';
+  const shot = !shotURL ? '' : ('<img class="pick-shot" src="' + shotURL + '" alt="The photo you just took">' +
+    '<div class="pick-row"><span class="hint">' + (recs.length > 1 ? recs.length + ' photos. ' : '') +
+    (fromCam ? 'Blurry? Take it again before saving.' : 'Wrong one? Choose again.') + '</span>' +
+    '<button class="btn" id="capRetake">' + (fromCam ? '📷 Retake' : '🖼 Choose again') + '</button></div>');
   const tiles = S.cats.map(c=>`<button class="cat" data-c="${c.id}"><span class="ic">${c.ic}</span>${esc(c.name)}</button>`).join('');
   openSheet(`
+    ${shot}
     <h2>What is it?</h2>
     <p class="hint" style="margin:-4px 0 13px">One tap. Everything else can wait until tonight.</p>
     <div class="cats">${tiles}</div>
@@ -1094,6 +1248,13 @@ function openCategoryPicker(recs){
     <button class="btn pri full" id="capSave" style="margin-top:4px">💾 Save Site</button>
   `);
   let chosen = null;
+  const retake = $('#capRetake');
+  if(retake) retake.onclick = () => {
+    (fromCam ? $('#fileCam') : $('#fileLib')).click();   // first, while the tap still counts
+    closeSheet();
+    if(shotURL) URL.revokeObjectURL(shotURL);
+    toast(fromCam ? 'Not saved — take it again' : 'Not saved — choose again');
+  };
   $$('#sheetcontent .cat').forEach(b => b.onclick = () => {
     $$('#sheetcontent .cat').forEach(x=>x.classList.remove('on'));
     b.classList.add('on'); chosen = b.dataset.c;
@@ -1103,6 +1264,7 @@ function openCategoryPicker(recs){
     const nm = $('#capName').value.trim();
     closeSheet();
     await createSite(chosen, nm, recs);
+    if(shotURL) URL.revokeObjectURL(shotURL);
   };
 }
 
@@ -1460,6 +1622,8 @@ async function openViewer(pid, siteId){
   const p = S.photos.find(x=>x.id===pid); if(!p) return;
   const s = S.sites.find(x=>x.id===siteId);
   const v = $('#viewer'); v.classList.add('on');
+  vzOpen(p);
+  if(!S.settings.zoomHinted){ toast('Pinch or double-tap the photo to check sharpness', 3200); S.settings.zoomHinted = true; saveSettings(); }
   let stamped = null, showing = S.settings.stampView;
 
   /* The buttons are drawn FIRST, for this photo, and the screen copy shows at once. With
@@ -1469,12 +1633,14 @@ async function openViewer(pid, siteId){
      photo on screen and the overlay is still wanted. */
   const token = {}; v._showing = token;
   const render = async () => {
+    vzReset();
     drawBar();
     $('#viewerImg').src = photoURL(p);
     if(!showing) return;
     if(!stamped) stamped = await stamp(p, s);
     if(v._showing !== token || !showing) return;
-    $('#viewerImg').src = URL.createObjectURL(stamped);
+    const su = URL.createObjectURL(stamped);
+    if(VZ.restoreSrc) VZ.restoreSrc = su; else $('#viewerImg').src = su;   // zoomed in: swap in after, not during
   };
   const drawBar = () => {
     $('#viewerBar').innerHTML = `
@@ -1904,6 +2070,7 @@ function refreshAll(){
   paintFilters(); paintSites(); paintStorage(); paintCats();
   if(map) paintMap();
   paintRecBar();
+  paintLastShot();
   $('#kSites').textContent  = S.sites.length;
   $('#kPhotos').textContent = S.photos.length;
 }
