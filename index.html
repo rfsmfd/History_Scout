@@ -336,8 +336,8 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       <div class="card">
         <h3>Photo Overlay</h3>
         <div class="sw">
-          <div><div class="t">Stamp exported photos</div><div class="d">Burns GPS / time / heading onto exported copies. Your stored originals are never modified.</div></div>
-          <div class="tg on" data-set="stampExport"></div>
+          <div><div class="t">Add stamped copies to exports</div><div class="d">A second copy of each photo, with the site, position and heading burned in, in a folder of its own. Your originals always go out untouched.</div></div>
+          <div class="tg" data-set="stampCopies"></div>
         </div>
         <div class="sw">
           <div><div class="t">Show overlay while viewing</div><div class="d">Preview the stamp in the photo viewer.</div></div>
@@ -348,8 +348,8 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       <div class="card">
         <h3>Capture Settings</h3>
         <div class="sw">
-          <div><div class="t">Downscale photos</div><div class="d">Resize to 2400px long edge. ~10× more photos fit on the phone, still plenty of detail for documentation.</div></div>
-          <div class="tg on" data-set="downscale"></div>
+          <div><div class="t">Keep photos full size</div><div class="d">Saves each photo exactly as the camera took it, camera information included — what you need to edit it later. Turn off only to save space: photos are then reduced to 2,400 pixels.</div></div>
+          <div class="tg on" data-set="fullSize"></div>
         </div>
         <div class="sw">
           <div><div class="t">Group nearby captures</div><div class="d">Photos taken near the site you're working on join it automatically. The bar on the Capture screen always shows where they're landing.</div></div>
@@ -466,7 +466,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 8;
+const BUILD = 9;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -676,26 +676,64 @@ const S = {
   filter: 'all',
   currentSiteId: null,   // where photos are landing right now
   forceNew: false,       // you pressed "+ New" — the next photo starts a fresh site
-  settings: {stampExport:true, stampView:true, downscale:true, grouping:true, groupRadius:274, recordedBy:'', sticky:{}},
+  settings: {fullSize:true, stampCopies:false, stampView:true, grouping:true, groupRadius:274, recordedBy:'', sticky:{}, settingsV:2},
   urls: new Map()            // photoId -> objectURL cache
 };
 const catById = id => S.cats.find(c=>c.id===id) || {id:'other', name:'Other', ic:'📍', color:'#7A8288'};
+
+/* BUILD 9 photo records hold a LIST of files — the original now, an edited version and a RAW
+   file later — plus a small copy made only for the screen. Records saved by earlier builds had
+   a single "blob", usually already reduced to 2,400 pixels. They are carried across as they
+   are, and marked so an export can say honestly that they may not be full size. */
+async function upgradePhoto(p){
+  if(p.v === 2 && Array.isArray(p.files)) return p;
+  if(!p.blob) return p;
+  const b = p.blob;
+  const q = Object.assign({}, p, {
+    v: 2,
+    files: [{ role: 'original', blob: b, type: b.type || 'image/jpeg', name: '', size: b.size, w: p.w, h: p.h,
+              fullSize: Math.max(p.w || 0, p.h || 0) === 2400 ? false : null }],
+    display: b,
+    size: b.size
+  });
+  delete q.blob;
+  try{ await dbPut('photos', q); }
+  catch(err){ console.error('could not upgrade photo', p.id, err); return p; }
+  return q;
+}
+const origFile   = p => (p.files || []).find(f => f.role === 'original') || (p.blob ? { blob: p.blob, type: p.blob.type, fullSize: null } : null);
+const screenBlob = p => p.display || (origFile(p) || {}).blob;
+const sizeLabel  = p => { const f = origFile(p) || {}; return f.fullSize === true ? 'Full size, exactly as taken' : f.fullSize === false ? 'Reduced to 2,400 pixels' : 'Saved before BUILD 9 — may be reduced'; };
+const EXT = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/heif': 'heif', 'image/webp': 'webp', 'image/tiff': 'tif' };
+const fileExt = f => EXT[((f && f.type) || '').toLowerCase()] || (((f && f.name) || '').split('.').pop() || 'jpg').toLowerCase();
 
 async function loadAll(){
   const [sites, photos, cats, settings] = await Promise.all([
     dbAll('sites'), dbAll('photos'), dbGet('meta','cats'), dbGet('meta','settings')
   ]);
   S.sites  = sites.sort((a,b)=>b.created-a.created);
-  S.photos = photos;
+  S.photos = [];
+  for(const p of photos) S.photos.push(await upgradePhoto(p));
   S.cats   = (cats && cats.v && cats.v.length) ? cats.v : DEFAULT_CATS.slice();
   if(settings && settings.v) Object.assign(S.settings, settings.v);
+  /* BUILD 9: photos are kept full size and exports go out clean. Settings saved by earlier
+     builds still say "downscale" and "stamp exports"; left alone, they would quietly override
+     the new defaults on every phone that ever opened the app. Migrated once. */
+  if(!(settings && settings.v && settings.v.settingsV === 2)){   // read the SAVED version: the starting defaults already say 2, so checking them could never trigger
+    S.settings.fullSize = true;
+    S.settings.stampCopies = false;
+    delete S.settings.downscale;
+    delete S.settings.stampExport;
+    S.settings.settingsV = 2;
+    await saveSettings();
+  }
 }
 const saveSettings = () => dbPut('meta',{k:'settings', v:S.settings});
 const saveCats     = () => dbPut('meta',{k:'cats',     v:S.cats});
 const photosOf     = id => S.photos.filter(p=>p.siteId===id).sort((a,b)=>a.takenAt-b.takenAt);
 
 function photoURL(p){
-  if(!S.urls.has(p.id)) S.urls.set(p.id, URL.createObjectURL(p.blob));
+  if(!S.urls.has(p.id)) S.urls.set(p.id, URL.createObjectURL(screenBlob(p)));
   return S.urls.get(p.id);
 }
 
@@ -909,26 +947,42 @@ function loadImage(blob){
   });
 }
 
+/* A copy scaled to fit maxEdge, as a JPEG — for the screen, or for "save space" mode.
+   Never used on the original, which is never re-saved. */
+const SCREEN_EDGE = 1600;
+async function scaledJPEG(img, maxEdge, quality){
+  const w = img.naturalWidth, h = img.naturalHeight, sc = Math.min(1, maxEdge / Math.max(w, h));
+  const cw = Math.max(1, Math.round(w * sc)), ch = Math.max(1, Math.round(h * sc));
+  const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+  cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', quality));
+  return { blob: blob, w: cw, h: ch };
+}
+
 async function processPhoto(file){
   const exif = await readEXIF(file);
   const {img, revoke} = await loadImage(file);
-  let blob = file, w = img.naturalWidth, h = img.naturalHeight;
+  const w = img.naturalWidth, h = img.naturalHeight;
 
-  if(S.settings.downscale && Math.max(w,h) > 2400){
-    const sc = 2400 / Math.max(w,h);
-    const cw = Math.round(w*sc), ch = Math.round(h*sc);
-    const cv = document.createElement('canvas'); cv.width=cw; cv.height=ch;
-    cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
-    blob = await new Promise(r=>cv.toBlob(r,'image/jpeg',0.88));
-    w = cw; h = ch;
+  /* The original is kept exactly as the camera handed it over — the same bytes, camera
+     information included — so it can be edited later. Only "save space" mode reduces it,
+     and then it is marked as not full size. */
+  let original = { blob: file, w: w, h: h, fullSize: true };
+  if(!S.settings.fullSize && Math.max(w, h) > 2400){
+    const r = await scaledJPEG(img, 2400, 0.88);
+    original = { blob: r.blob, w: r.w, h: r.h, fullSize: false };
   }
+  const display = (await scaledJPEG(img, SCREEN_EDGE, 0.85)).blob;   // for the screen only, never exported
   revoke();
 
   // GPS: live fix wins over EXIF (Safari often strips EXIF GPS from picked photos)
   const p = S.pos;
   const useLive = !!p;
   return {
-    id: uid(), siteId: null, blob, w, h, size: blob.size,
+    id: uid(), siteId: null, v: 2,
+    files: [{ role: 'original', blob: original.blob, type: original.blob.type || file.type || 'image/jpeg',
+              name: file.name || '', size: original.blob.size, w: original.w, h: original.h, fullSize: original.fullSize }],
+    display: display, w: original.w, h: original.h, size: original.blob.size,
     lat: useLive ? p.lat : (exif.lat ?? null),
     lon: useLive ? p.lon : (exif.lon ?? null),
     acc: useLive ? p.acc : null,
@@ -1107,12 +1161,21 @@ async function attachTo(siteId, recs){
 /* ======================================================================
    OVERLAY STAMP  — composited on demand, never burned into the stored original
    ====================================================================== */
+/* iPhone browsers refuse to draw a canvas much over 16.7 million pixels, and a 24-megapixel
+   original is well past that. Stamped copies are drawn no larger than 4,000 pixels on the long
+   side — about 12 megapixels at 4:3 — plenty for a labelled photo, and always safe. */
+const STAMP_EDGE = 4000;
 async function stamp(photo, site){
-  const {img, revoke} = await loadImage(photo.blob);
-  const W = img.naturalWidth, H = img.naturalHeight;
-  const cv = document.createElement('canvas'); cv.width=W; cv.height=H;
+  const o = origFile(photo);
+  let loaded;
+  try{ loaded = await loadImage(o.blob); }
+  catch(e){ loaded = await loadImage(screenBlob(photo)); }   // e.g. a HEIC original this browser can't decode
+  const img = loaded.img, revoke = loaded.revoke;
+  const sc = Math.min(1, STAMP_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+  const W = Math.round(img.naturalWidth * sc), H = Math.round(img.naturalHeight * sc);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const x = cv.getContext('2d');
-  x.drawImage(img,0,0);
+  x.drawImage(img, 0, 0, W, H);
   revoke();
 
   const u  = Math.max(W,H)/100;              // scale unit
@@ -1304,6 +1367,7 @@ function openSite(id){
 
     <div style="height:14px"></div>
     <button class="btn pri full" id="saveSite">💾 Save Changes</button>
+    <button class="btn full" id="expSite" style="margin-top:9px">📦 Export this site (ZIP)</button>
     <div class="btnrow" style="margin-top:9px">
       <button class="btn" id="mapSite">🗺 Show on map</button>
       <button class="btn danger" id="delSite">🗑 Delete site</button>
@@ -1366,6 +1430,7 @@ function openSite(id){
   };
 
   $('#mapSite').onclick = () => { closeSheet(); showView('map'); setTimeout(()=>focusSite(s), 260); };
+  $('#expSite').onclick = () => exportZip([s], s.name, $('#expSite'));
 
   /* GISCORDS is text, so it does not follow the geometry on its own. If the position
      changes, the text has to be rewritten or the two quietly disagree. */
@@ -1397,13 +1462,21 @@ async function openViewer(pid, siteId){
   const v = $('#viewer'); v.classList.add('on');
   let stamped = null, showing = S.settings.stampView;
 
+  /* The buttons are drawn FIRST, for this photo, and the screen copy shows at once. With
+     full-size originals the stamp takes a second or more to draw; the old order left the
+     previous photo's buttons live for that long, so a Delete tapped in the gap deleted the
+     wrong photo. The stamped version replaces the screen copy only if this is still the
+     photo on screen and the overlay is still wanted. */
+  const token = {}; v._showing = token;
   const render = async () => {
-    if(showing){
-      if(!stamped) stamped = await stamp(p, s);
-      $('#viewerImg').src = URL.createObjectURL(stamped);
-    } else {
-      $('#viewerImg').src = photoURL(p);
-    }
+    drawBar();
+    $('#viewerImg').src = photoURL(p);
+    if(!showing) return;
+    if(!stamped) stamped = await stamp(p, s);
+    if(v._showing !== token || !showing) return;
+    $('#viewerImg').src = URL.createObjectURL(stamped);
+  };
+  const drawBar = () => {
     $('#viewerBar').innerHTML = `
       <button class="btn" id="vOverlay">${showing?'🚫 Hide':'🏷 Show'} overlay</button>
       <button class="btn" id="vInfo">ℹ️ Details</button>
@@ -1425,6 +1498,7 @@ async function openViewer(pid, siteId){
         <div class="kv"><span class="k">EXIF direction</span><span class="v">${p.exifDir!=null?p.exifDir.toFixed(0)+'°':'not present'}</span></div>
         <div class="kv"><span class="k">Elevation</span><span class="v">${p.alt!=null?Math.round(p.alt*3.28084)+' ft':'—'}</span></div>
         <div class="kv"><span class="k">Pixels</span><span class="v">${p.w} × ${p.h}</span></div>
+        <div class="kv"><span class="k">Saved at</span><span class="v">${sizeLabel(p)}</span></div>
         <div class="kv"><span class="k">File size</span><span class="v">${fmtBytes(p.size)}</span></div>
         <button class="btn full" id="pBack" style="margin-top:14px">← Back to site</button>`);
       $('#pBack').onclick = () => { closeSheet(); openSite(siteId); };
@@ -1529,13 +1603,13 @@ function focusSite(s){
    photo counts, my own invented fields — follows after, where it can be ignored. */
 function extraFieldDefs(){ return FIELDS.filter(g=>g.extra).flatMap(g=>g.f); }
 
-function csvSites(){
+function csvSites(sites = S.sites){
   const extra = extraFieldDefs();
   const head = [...TEMPLATE_ORDER,
                 'site_id','latitude','longitude','accuracy_m','elevation_ft',
                 'facing_deg','facing_cardinal','photo_count','first_recorded_iso','last_updated_iso',
                 ...extra.map(f=>f.k)];
-  const rows = S.sites.map(s=>{
+  const rows = sites.map(s=>{
     const ph = photosOf(s.id);
     return [...TEMPLATE_ORDER.map(k=>templateValue(s,k)),
       s.id, s.lat??'', s.lon??'', s.acc!=null?s.acc.toFixed(1):'', s.alt!=null?Math.round(s.alt*3.28084):'',
@@ -1545,20 +1619,23 @@ function csvSites(){
   });
   return toCSV([head,...rows]);
 }
-function csvPhotos(){
+function csvPhotos(sites = S.sites){
+  const paths = sitePaths();
   const head = ['photo_id','site_id','site_name','file','taken_iso','latitude','longitude','accuracy_m',
-                'position_source','facing_deg','facing_cardinal','heading_source','exif_direction','elevation_ft','width','height','bytes'];
+                'position_source','facing_deg','facing_cardinal','heading_source','exif_direction','elevation_ft',
+                'width','height','bytes','file_type','full_size'];
   const rows = [];
-  for(const s of S.sites){
-    photosOf(s.id).forEach((p,i)=>{
-      rows.push([p.id, s.id, s.name, photoFile(s,i),
-        new Date(p.takenAt).toISOString(), p.lat??'', p.lon??'', p.acc!=null?p.acc.toFixed(1):'',
-        p.gpsSource, p.heading!=null?p.heading.toFixed(0):'', p.heading!=null?cardinal(p.heading):'',
-        p.headingSource??'', p.exifDir!=null?p.exifDir.toFixed(0):'', p.alt!=null?Math.round(p.alt*3.28084):'',
-        p.w, p.h, p.size]);
+  for(const st of sites){
+    photosOf(st.id).forEach((p, i) => {
+      const o = origFile(p) || {};
+      rows.push([p.id, st.id, st.name, photoPath(paths.get(st.id), i, p),
+        new Date(p.takenAt).toISOString(), p.lat ?? '', p.lon ?? '', p.acc != null ? p.acc.toFixed(1) : '',
+        p.gpsSource, p.heading != null ? p.heading.toFixed(0) : '', p.heading != null ? cardinal(p.heading) : '',
+        p.headingSource ?? '', p.exifDir != null ? p.exifDir.toFixed(0) : '', p.alt != null ? Math.round(p.alt * 3.28084) : '',
+        p.w, p.h, p.size, o.type || '', o.fullSize === true ? 'yes' : o.fullSize === false ? 'no' : 'unknown']);
     });
   }
-  return toCSV([head,...rows]);
+  return toCSV([head, ...rows]);
 }
 function toCSV(rows){
   return rows.map(r=>r.map(c=>{
@@ -1566,11 +1643,11 @@ function toCSV(rows){
     return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
   }).join(',')).join('\r\n');
 }
-function geojson(){
+function geojson(sites = S.sites){
   const extra = extraFieldDefs();
   return JSON.stringify({
     type:'FeatureCollection',
-    features: S.sites.filter(s=>s.lat!=null).map(s=>({
+    features: sites.filter(s=>s.lat!=null).map(s=>({
       type:'Feature',
       geometry:{type:'Point', coordinates:[s.lon, s.lat, s.alt??0]},
       properties:{
@@ -1587,7 +1664,25 @@ function geojson(){
   }, null, 2);
 }
 const slug = s => String(s).replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase().slice(0,40) || 'site';
-const photoFile = (s,i) => `${slug(s.name)}-${String(i+1).padStart(2,'0')}.jpg`;
+/* Export names: Category / Site / "Site 01.jpg" — the layout Bring in new will use. Windows
+   forbids a few characters in names, so they become dashes. Two sites with the same name in the
+   same category get "(2)", numbered by when they were recorded, so a path never changes. */
+const BAD_NAME = new RegExp('[' + String.fromCharCode(92) + '/:*?"<>|]+', 'g');
+const safeName = t => (String(t || '').replace(BAD_NAME, '-').replace(/[. ]+$/, '').trim() || 'Untitled');
+function sitePaths(){
+  const map = new Map(), used = new Set();
+  for(const st of [...S.sites].sort((a, b) => a.created - b.created)){
+    const cat = safeName(catById(st.category).name);
+    const base = safeName(st.name);
+    let name = base, n = 1;
+    while(used.has(cat + '/' + name.toLowerCase())) name = base + ' (' + (++n) + ')';
+    used.add(cat + '/' + name.toLowerCase());
+    map.set(st.id, { cat: cat, site: name });
+  }
+  return map;
+}
+const photoNum  = i => String(i + 1).padStart(2, '0');
+const photoPath = (sp, i, p) => 'Photos/' + sp.cat + '/' + sp.site + '/' + sp.site + ' ' + photoNum(i) + '.' + fileExt(origFile(p));
 
 function download(blob, name){
   const u = URL.createObjectURL(blob), a = document.createElement('a');
@@ -1606,45 +1701,70 @@ $('#btnExportGeo').onclick = () => {
   download(new Blob([geojson()],{type:'application/geo+json'}), `history-scout-${stampDate()}.geojson`);
   toast('GeoJSON saved');
 };
-$('#btnExportZip').onclick = async () => {
-  if(!S.sites.length){ toast('Nothing to export yet'); return; }
+/* ---------- export ----------
+   Originals go out exactly as they were taken — never stamped, never re-saved. Stamped copies
+   are optional and sit in a folder of their own. Everything is laid out Category / Site, the
+   layout Bring in new will use. One site, or all of them. */
+async function exportZip(sites, label, btn){
   if(typeof JSZip === 'undefined'){ toast('ZIP library not loaded — use CSV'); return; }
-  const btn = $('#btnExportZip'); const old = btn.textContent;
+  const photos = sites.flatMap(st => photosOf(st.id));
+  const est = photos.reduce((a, p) => a + (p.size || 0), 0) * (S.settings.stampCopies ? 1.6 : 1);
+  if(est > 600 * 1048576 && !confirm('That export is about ' + fmtBytes(est) + '. A phone can run out of memory building a file that large — exporting one site at a time is safer. Go ahead anyway?')) return;
+  const old = btn ? btn.textContent : '';
   try{
-    const zip = new JSZip();
-    zip.file('sites.csv', csvSites());
-    zip.file('photos.csv', csvPhotos());
-    zip.file('sites.geojson', geojson());
-    zip.file('README.txt',
-`HISTORY SCOUT EXPORT
-Generated ${new Date().toString()}
-BUILD ${BUILD}
-
-sites.csv       one row per site, all schema fields
-photos.csv      one row per photo, with its own GPS + heading
-sites.geojson   point features — drag straight into ArcGIS / QGIS / Google Earth
-photos/         ${S.settings.stampExport ? 'JPEGs with the info overlay burned in' : 'unmodified original JPEGs'}
-
-Photos are named <site-slug>-NN.jpg and referenced by the "file" column in photos.csv.
-`);
-    const dir = zip.folder('photos');
-    let n = 0, total = S.photos.length;
-    for(const s of S.sites){
-      const ph = photosOf(s.id);
-      for(let i=0;i<ph.length;i++){
-        const out = S.settings.stampExport ? await stamp(ph[i], s) : ph[i].blob;
-        dir.file(photoFile(s,i), out);
-        n++; btn.textContent = `⏳ Photo ${n} of ${total}…`;
+    const zip = new JSZip(), paths = sitePaths();
+    zip.file('For ArcGIS/sites.csv', csvSites(sites));
+    zip.file('For ArcGIS/photos.csv', csvPhotos(sites));
+    zip.file('For ArcGIS/sites.geojson', geojson(sites));
+    const reduced = photos.filter(p => (origFile(p) || {}).fullSize !== true).length;
+    zip.file('README.txt', exportReadme(sites.length, photos.length, reduced));
+    let n = 0;
+    for(const st of sites){
+      const sp = paths.get(st.id), ph = photosOf(st.id);
+      for(let i = 0; i < ph.length; i++){
+        const o = origFile(ph[i]);
+        if(o && o.blob) zip.file(photoPath(sp, i, ph[i]), o.blob, { binary: true });
+        if(S.settings.stampCopies){
+          const stamped = await stamp(ph[i], st);
+          zip.file('Stamped copies/' + sp.cat + '/' + sp.site + '/' + sp.site + ' ' + photoNum(i) + ' stamped.jpg', stamped, { binary: true });
+        }
+        n++;
+        if(btn) btn.textContent = '⏳ Photo ' + n + ' of ' + photos.length + '…';
       }
     }
-    btn.textContent = '⏳ Zipping…';
-    const blob = await zip.generateAsync({type:'blob'});
-    download(blob, `history-scout-${stampDate()}.zip`);
-    toast('Export ready — save it to Files or iCloud Drive', 3600);
+    if(btn) btn.textContent = '⏳ Zipping…';
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+    download(blob, 'History Scout ' + safeName(label) + ' ' + stampDate() + '.zip');
+    toast('Export ready — save it to Files, then copy it to your computer', 3600);
   }catch(err){
-    console.error(err); toast('Export failed: '+err.message, 3600);
-  }finally{ btn.textContent = old; }
-};
+    console.error(err); toast('Export failed: ' + err.message, 3600);
+  }finally{ if(btn) btn.textContent = old; }
+}
+
+/* The README says what is actually in the export — no more "unmodified originals" when they
+   weren't. */
+function exportReadme(nSites, nPhotos, reduced){
+  const lines = [
+    'HISTORY SCOUT EXPORT',
+    'Generated ' + new Date().toString(),
+    'BUILD ' + BUILD,
+    '',
+    nSites + (nSites === 1 ? ' site, ' : ' sites, ') + nPhotos + (nPhotos === 1 ? ' photo.' : ' photos.'),
+    '',
+    'Photos/          Category / Site / "Site 01.jpg". Each photo is the original, exactly as the',
+    '                 camera handed it to History Scout: never stamped, never re-saved, with the',
+    '                 camera’s own information still inside. Ready to edit.',
+    reduced ? '                 ' + reduced + ' of them were saved before BUILD 9 or in "save space" mode and may be reduced to 2,400 pixels. photos.csv says which (full_size column).' : null,
+    S.settings.stampCopies ? 'Stamped copies/  A second copy of each photo with the site, position and heading burned in, at most 4,000 pixels.' : null,
+    'For ArcGIS/      sites.csv (your MASTER_Point_Template columns first), photos.csv (one row per',
+    '                 photo; "file" is where it sits in this export), sites.geojson.',
+    '',
+    'Edited a photo? Save it beside the original as "... edited.jpg" - never over it.'
+  ];
+  return lines.filter(l => l !== null).join('\r\n') + '\r\n';
+}
+
+$('#btnExportZip').onclick = () => exportZip([...S.sites].sort((a, b) => a.created - b.created), 'all sites', $('#btnExportZip'));
 
 /* ======================================================================
    SETTINGS / CATEGORIES / STORAGE / DIAGNOSTICS
