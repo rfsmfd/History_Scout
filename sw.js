@@ -5,7 +5,7 @@
      - libraries + map tiles: CACHE FIRST
        => tiles you've already looked at keep working with no signal
    Bump BUILD to match index.html when you ship.  */
-const BUILD = 10;
+const BUILD = 11;
 const APP   = 'hs-app-v' + BUILD;
 const LIB   = 'hs-lib-v1';
 const TILES = 'hs-tiles-v1';
@@ -13,7 +13,10 @@ const MAX_TILES = 1200;
 
 const SHELL = ['./', './index.html'];
 
-const LIB_HOSTS = ['cdnjs.cloudflare.com', 'unpkg.com', 'cdn.jsdelivr.net'];
+/* www.gstatic.com serves the Firebase code (BUILD 11). Saved like the other libraries so the app
+   still opens and captures in a hollow with no signal. The database and photo-storage requests
+   themselves go to *.googleapis.com, which is on no list here, so they always go to the network. */
+const LIB_HOSTS = ['cdnjs.cloudflare.com', 'unpkg.com', 'cdn.jsdelivr.net', 'www.gstatic.com'];
 const TILE_HOSTS = ['server.arcgisonline.com', 'basemap.nationalmap.gov', 'tile.openstreetmap.org'];
 
 self.addEventListener('install', e => {

@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="History Scout">
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22History%20Scout%22%2C%22short_name%22%3A%22History%20Scout%22%2C%22start_url%22%3A%22.%22%2C%22scope%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22orientation%22%3A%22portrait%22%2C%22background_color%22%3A%22%23241E1A%22%2C%22theme_color%22%3A%22%23241E1A%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage/svg%2Bxml%2C%253Csvg%2520xmlns%253D%2522http%253A//www.w3.org/2000/svg%2522%2520width%253D%2522512%2522%2520height%253D%2522512%2522%2520viewBox%253D%25220%25200%2520512%2520512%2522%253E%253Crect%2520width%253D%2522512%2522%2520height%253D%2522512%2522%2520rx%253D%252296%2522%2520fill%253D%2522%2523241E1A%2522/%253E%253Cpath%2520d%253D%2522M96%2520300%2520L256%2520150%2520L416%2520300%2520Z%2522%2520fill%253D%2522%2523C8873A%2522/%253E%253Crect%2520x%253D%2522136%2522%2520y%253D%2522300%2522%2520width%253D%2522240%2522%2520height%253D%2522130%2522%2520fill%253D%2522%2523C8873A%2522/%253E%253Crect%2520x%253D%2522226%2522%2520y%253D%2522348%2522%2520width%253D%252260%2522%2520height%253D%252282%2522%2520fill%253D%2522%2523241E1A%2522/%253E%253C/svg%253E%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image/svg%2Bxml%22%7D%5D%7D">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%23241E1A'/%3E%3Cpath d='M96 300 L256 150 L416 300 Z' fill='%23C8873A'/%3E%3Crect x='136' y='300' width='240' height='130' fill='%23C8873A'/%3E%3Crect x='226' y='348' width='60' height='82' fill='%23241E1A'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{
@@ -148,7 +148,7 @@ button{background:none;border:0;cursor:pointer}
 /* ---------- forms ---------- */
 label.f{display:block;margin-bottom:11px}
 label.f > span{display:block;font-size:15px;font-weight:700;letter-spacing:.5px;color:var(--ink3);text-transform:uppercase;margin-bottom:4px}
-input[type=text],input[type=number],input[type=date],select,textarea{
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],select,textarea{
   width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:10px;
   padding:14px 13px;min-height:52px;font-size:18px;
 }
@@ -261,6 +261,58 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 .tg::after{content:"";position:absolute;top:2px;left:2px;width:23px;height:23px;border-radius:50%;background:var(--ink3);transition:.18s}
 .tg.on{background:#E3CD97;border-color:var(--accent)}
 .tg.on::after{left:24px;background:var(--accent)}
+
+/* ---------- BUILD 11: sign-in page on his splash artwork ---------- */
+#gate{position:fixed;inset:0;z-index:880;background:#1B150E;display:none}
+#gate.on{display:block}
+#gate img.art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}
+#gate .panel{position:absolute;left:12px;right:12px;bottom:calc(var(--safe-bot) + 14px);max-width:460px;margin:0 auto;
+  background:rgba(244,236,217,.97);border:1px solid var(--line);border-radius:16px;padding:16px 16px 10px;
+  box-shadow:0 8px 28px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:9px}
+#gate .panel .btn{width:100%;min-height:52px}
+#gate .panel p{margin:2px 0 0;text-align:center;font-size:16px;color:var(--ink2)}
+/* A wide screen — a PC, or a tablet on its side: the whole picture on the left, the buttons beside it. */
+@media (min-aspect-ratio: 1/1){
+  #gate img.art{inset:0 auto 0 0;width:auto;max-width:62%;height:100%;object-fit:contain;object-position:left center}
+  #gate .panel{left:auto;right:5%;top:50%;bottom:auto;transform:translateY(-50%);width:min(380px,32%);margin:0}
+}
+.linkbtn{background:none;border:0;padding:0 2px;min-height:44px;color:var(--accent);font-weight:750;text-decoration:underline;font-size:inherit}
+.formmsg{font-size:16px;line-height:1.45;margin:4px 0 12px;color:var(--ink2)}
+.formmsg.bad{color:var(--bad)}.formmsg.good{color:var(--good)}
+
+/* ---------- BUILD 11: backed up or not, said plainly on Capture ---------- */
+.syncline{margin:-6px 2px 14px;font-size:15px;color:var(--ink2);line-height:1.4}
+.syncline.warn{color:var(--warn)}
+
+/* ---------- BUILD 11: account, Send, deleted items, access requests ---------- */
+.progress{height:10px;border-radius:6px;background:var(--bg3);overflow:hidden;margin:9px 0 4px}
+.progress > i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.row-item{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bg3)}
+.row-item:last-child{border-bottom:0}
+.row-item .thumbsm{width:56px;height:56px;flex:0 0 56px;border-radius:8px;object-fit:cover;background:var(--bg3);
+  display:flex;align-items:center;justify-content:center;font-size:24px}
+.row-item .meta{flex:1;min-width:0;font-size:16px}
+.row-item .meta .sub{font-size:14px;color:var(--ink3);margin-top:2px}
+.row-item .btn{flex:0 0 auto;min-height:46px;padding:10px 14px}
+.pgrid .cell .ph-wait{aspect-ratio:1;border-radius:9px;background:var(--bg3);display:flex;align-items:center;justify-content:center;
+  text-align:center;font-size:13px;line-height:1.3;color:var(--ink3);padding:6px}
+.sens{display:flex;gap:10px;align-items:flex-start;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin:0 0 12px}
+.sens .t{font-size:16px;font-weight:650}.sens .d{font-size:14px;color:var(--ink3);margin-top:2px;line-height:1.4}
+.sens .tg{margin-left:auto}
+
+/* ---------- BUILD 11: the desk layout, for a wide screen ----------
+   Sites down the left, the record you pick on the right, its photos large beneath it. */
+#siteDetail{display:none}
+.site.sel{border-color:var(--accent);background:#F2E2BC}
+@media (min-width:1000px){
+  #v-sites.on{display:grid;grid-template-columns:minmax(320px,400px) 1fr;padding:0;overflow:hidden}
+  #sitesPane{overflow-y:auto;padding:14px;border-right:1px solid var(--line)}
+  #siteDetail{display:block;overflow-y:auto;padding:16px 26px 34px}
+  #siteDetail > h2{margin:0 0 12px;font-size:23px}
+  #siteDetail .pgrid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+  #sheet{justify-content:center}
+  #sheetbody{max-width:760px}
+}
 </style>
 </head>
 <body>
@@ -297,6 +349,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
         <button id="recName">📍 No site yet — the next photo starts one</button>
         <button id="recNew">＋ New</button>
       </div>
+      <p class="syncline" id="syncLine" hidden></p>
 
       <div class="cap-row">
         <button class="bigbtn" id="btnCam"><span class="ic">📷</span>Capture Site</button>
@@ -327,8 +380,11 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 
     <!-- ============ SITES ============ -->
     <div class="view" id="v-sites">
-      <div class="filterbar" id="filterbar"></div>
-      <div id="siteList"></div>
+      <div id="sitesPane">
+        <div class="filterbar" id="filterbar"></div>
+        <div id="siteList"></div>
+      </div>
+      <div id="siteDetail"><div class="empty"><span class="ic">🗂</span>Pick a site on the left to see its record and photos.</div></div>
     </div>
 
     <!-- ============ MAP ============ -->
@@ -345,6 +401,11 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 
     <!-- ============ MORE ============ -->
     <div class="view" id="v-more">
+      <div class="card" id="acctCard">
+        <h3>Your account</h3>
+        <div id="acctBody"></div>
+      </div>
+
       <div class="card">
         <h3>Export</h3>
         <p class="hint" style="margin:0 0 11px">Your insurance policy. Do this after every field session — before anything else.</p>
@@ -472,6 +533,15 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       </div>
 </div>
 
+<div id="gate" role="dialog" aria-label="Welcome to History Scout">
+  <img class="art" src="splash.jpg" alt="History Scout. Record today. Preserve tomorrow.">
+  <div class="panel">
+    <button class="btn pri" id="gSignIn">Sign in</button>
+    <button class="btn" id="gLocal">Use without an account</button>
+    <p>New here? <button class="linkbtn" id="gRequest">Request access</button></p>
+  </div>
+</div>
+
 <div id="sheet"><div id="sheetbody"><div class="grab"></div><div id="sheetcontent"></div></div></div>
 <div id="viewer"><div class="im"><img id="viewerImg" alt=""></div><div class="bar" id="viewerBar"></div></div>
 <button id="updatebar" onclick="location.reload()">↻ New version ready — tap to update</button>
@@ -488,7 +558,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 10;
+const BUILD = 11;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -723,7 +793,8 @@ async function upgradePhoto(p){
   catch(err){ console.error('could not upgrade photo', p.id, err); return p; }
   return q;
 }
-const origFile   = p => (p.files || []).find(f => f.role === 'original') || (p.blob ? { blob: p.blob, type: p.blob.type, fullSize: null } : null);
+const origFile   = p => (p.files || []).find(f => f.role === 'original') || (p.blob ? { blob: p.blob, type: p.blob.type, fullSize: null } : null)
+                   || (p.origMeta ? Object.assign({ role: 'original', blob: null }, p.origMeta) : null);   // BUILD 11: taken on another device
 const screenBlob = p => p.display || (origFile(p) || {}).blob;
 const sizeLabel  = p => { const f = origFile(p) || {}; return f.fullSize === true ? 'Full size, exactly as taken' : f.fullSize === false ? 'Reduced to 2,400 pixels' : 'Saved before BUILD 9 — may be reduced'; };
 const EXT = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/heif': 'heif', 'image/webp': 'webp', 'image/tiff': 'tif' };
@@ -733,10 +804,17 @@ async function loadAll(){
   const [sites, photos, cats, settings] = await Promise.all([
     dbAll('sites'), dbAll('photos'), dbGet('meta','cats'), dbGet('meta','settings')
   ]);
-  S.sites  = sites.sort((a,b)=>b.created-a.created);
-  S.photos = [];
-  for(const p of photos) S.photos.push(await upgradePhoto(p));
+  /* BUILD 11: every record, deleted ones included, lives in S.all; S.sites and S.photos are what
+     the screens show, rebuilt from it. Records from earlier builds get their change-times once. */
+  S.all.sites = new Map(); S.all.photos = new Map();
+  for(const st of sites){ if(stampLegacy('site', st)) await dbPut('sites', st); S.all.sites.set(st.id, st); }
+  for(const p0 of photos){ const p = await upgradePhoto(p0); if(stampLegacy('photo', p)) await dbPut('photos', p); S.all.photos.set(p.id, p); }
   S.cats   = (cats && cats.v && cats.v.length) ? cats.v : DEFAULT_CATS.slice();
+  const cs = await dbGet('meta', 'catsync');
+  S.catAll = (cs && cs.v && cs.v.all) || S.cats.slice(); S.catT = (cs && cs.v && cs.v.t) || {}; S.catGone = (cs && cs.v && cs.v.gone) || {};
+  const ac = await dbGet('meta', 'account');
+  if(ac && ac.v) Object.assign(S.acct, ac.v);
+  rebuild();
   if(settings && settings.v) Object.assign(S.settings, settings.v);
   /* BUILD 9: photos are kept full size and exports go out clean. Settings saved by earlier
      builds still say "downscale" and "stamp exports"; left alone, they would quietly override
@@ -751,11 +829,20 @@ async function loadAll(){
   }
 }
 const saveSettings = () => dbPut('meta',{k:'settings', v:S.settings});
-const saveCats     = () => dbPut('meta',{k:'cats',     v:S.cats});
+const saveCats     = () => Promise.all([dbPut('meta',{k:'cats', v:S.cats}),
+  dbPut('meta',{k:'catsync', v:{all:S.catAll || S.cats, t:S.catT || {}, gone:S.catGone || {}}})]);
 const photosOf     = id => S.photos.filter(p=>p.siteId===id).sort((a,b)=>a.takenAt-b.takenAt);
 
+/* BUILD 11: a photo taken on the other device shows as soon as that device has sent it — the
+   screen-sized copy is fetched once and kept. Until it is sent, a plain placeholder says so. */
+const phSVG = (a, b) => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+  '<rect width="100" height="100" fill="#DCD0B1"/><text x="50" y="47" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#463B29">' + a +
+  '</text><text x="50" y="62" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#463B29">' + b + '</text></svg>');
+const PH_WAIT = phSVG('Not sent', 'yet'), PH_LOAD = phSVG('Loading', '…');
 function photoURL(p){
-  if(!S.urls.has(p.id)) S.urls.set(p.id, URL.createObjectURL(screenBlob(p)));
+  const b = screenBlob(p);
+  if(!b){ if(p.up && p.up.done){ fetchDisplay(p); return PH_LOAD; } return PH_WAIT; }
+  if(!S.urls.has(p.id)) S.urls.set(p.id, URL.createObjectURL(b));
   return S.urls.get(p.id);
 }
 
@@ -1048,9 +1135,7 @@ $('#lsDel').onclick = async () => {
   const p = S.photos.find(x => x.id === S.lastShotId);
   if(!p){ idle(); return; }
   $('#fileCam').click();                          // first, while the tap still counts: iPhones only open the camera from a tap
-  await dbDel('photos', p.id);
-  const u = S.urls.get(p.id); if(u){ URL.revokeObjectURL(u); S.urls.delete(p.id); }
-  S.photos = S.photos.filter(x => x.id !== p.id);
+  await trashPhoto(p);                             // BUILD 11: marked deleted, restorable from Deleted items
   if(p.siteId){ S.currentSiteId = p.siteId; S.forceNew = false; }   // the retake joins the same site
   idle(); refreshAll();
   toast('Deleted — take it again');
@@ -1077,7 +1162,18 @@ function vzOpen(p){
 }
 function vzUseOriginal(){
   if(!VZ.photo || VZ.restoreSrc) return;
-  const o = origFile(VZ.photo); if(!o || !o.blob) return;
+  const o = origFile(VZ.photo); if(!o) return;
+  if(!o.blob){                                     // BUILD 11: taken on another device — fetch the full-size original
+    if(VZ.fetching) return;
+    const p = VZ.photo; VZ.fetching = true;
+    fetchOriginal(p).then(b => {
+      VZ.fetching = false;
+      if(!b || VZ.photo !== p || VZ.restoreSrc || VZ.s <= 1.05) return;
+      if(!VZ.fullURL) VZ.fullURL = URL.createObjectURL(b);
+      VZ.restoreSrc = vzImg().src; vzImg().src = VZ.fullURL;
+    }).catch(() => { VZ.fetching = false; });
+    return;
+  }
   if(!VZ.fullURL) VZ.fullURL = URL.createObjectURL(o.blob);
   VZ.restoreSrc = vzImg().src; vzImg().src = VZ.fullURL;
 }
@@ -1214,7 +1310,7 @@ function openRename(){
   setTimeout(() => { const el = $('#rnName'); if(el){ el.focus(); el.select(); } }, 120);
   $('#rnSave').onclick = async () => {
     const v = $('#rnName').value.trim();
-    if(v){ site.name = v; site.updated = Date.now(); await dbPut('sites', site); }
+    if(v && v !== site.name){ site.name = v; await putSite(site, ['name']); }
     closeSheet(); refreshAll(); paintRecBar();
     if(v) toast('Renamed — ' + v);
   };
@@ -1301,20 +1397,17 @@ async function createSite(catId, name, recs){
              GISCORDS: gisCords(p0.lat, p0.lon),
              status: 'Draft'}
   };
-  await dbPut('sites', site);
-  for(const r of recs){ r.siteId = site.id; await dbPut('photos', r); }
-  S.sites.unshift(site);
-  S.photos.push(...recs);
+  await putSite(site, keysOf('site', site));
+  for(const r of recs){ r.siteId = site.id; await putPhoto(r, keysOf('photo', r)); }
   S.currentSiteId = site.id; S.forceNew = false;
   refreshAll(); paintRecBar();
   toast(`Saved — ${site.name}`);
 }
 
 async function attachTo(siteId, recs){
-  for(const r of recs){ r.siteId = siteId; await dbPut('photos', r); }
-  S.photos.push(...recs);
+  for(const r of recs){ r.siteId = siteId; await putPhoto(r, keysOf('photo', r)); }
   const s = S.sites.find(x=>x.id===siteId);
-  if(s){ s.updated = Date.now(); await dbPut('sites', s); }
+  if(s){ s.updated = Date.now(); await putSite(s); }
   S.currentSiteId = siteId; S.forceNew = false;
   refreshAll(); paintRecBar();
   toast(`Added ${recs.length} photo${recs.length>1?'s':''} to ${s ? s.name : 'the site'}`);
@@ -1346,8 +1439,8 @@ async function stamp(photo, site){
   const lines = [
     {t: site.name, s: f1, w: '700', title: true},
     {t: `${catById(site.category).name}${site.fields.condition ? ' · ' + site.fields.condition : ''}`, s: f3, w: '500'},
-    {t: photo.lat!=null ? `${dms(photo.lat,true)}   ${dms(photo.lon,false)}` : 'no position recorded', s: f2, w:'600'},
-    {t: photo.lat!=null ? `${photo.lat.toFixed(6)}, ${photo.lon.toFixed(6)}${photo.acc!=null?`   ±${photo.acc.toFixed(0)} m`:''}` : '', s: f3, w:'500'},
+    {t: site.sensitive ? 'Location withheld — sensitive site' : photo.lat!=null ? `${dms(photo.lat,true)}   ${dms(photo.lon,false)}` : 'no position recorded', s: f2, w:'600'},
+    {t: site.sensitive ? '' : photo.lat!=null ? `${photo.lat.toFixed(6)}, ${photo.lon.toFixed(6)}${photo.acc!=null?`   ±${photo.acc.toFixed(0)} m`:''}` : '', s: f3, w:'500'},
     {t: `${fmtTime(photo.takenAt)}`, s: f3, w:'500'},
     {t: photo.heading!=null ? `Facing ${photo.heading.toFixed(0)}° ${cardinal(photo.heading)}${photo.alt!=null?`   ·   ${Math.round(photo.alt*3.28084)} ft elev`:''}` : (photo.alt!=null?`${Math.round(photo.alt*3.28084)} ft elev`:''), s: f3, w:'500'}
   ].filter(l=>l.t);
@@ -1450,10 +1543,10 @@ function paintSites(){
       ? `<img class="thumb" src="${photoURL(ph[0])}" alt="">`
       : `<div class="thumb">${c.ic}</div>`;
     const d = (S.pos && s.lat!=null) ? haversine(S.pos.lat,S.pos.lon,s.lat,s.lon) : null;
-    return `<button class="site" data-id="${s.id}">
+    return `<button class="site${S.deskSite===s.id?' sel':''}" data-id="${s.id}">
       ${thumb}
       <div class="meta">
-        <div class="nm">${c.ic} ${esc(s.name)}</div>
+        <div class="nm">${c.ic} ${esc(s.name)}${s.sensitive?' 🔒':''}</div>
         <div class="ln">${esc(c.name)}${s.fields.condition?' · '+esc(s.fields.condition):''}</div>
         <div class="ln2">${ph.length} photo${ph.length===1?'':'s'} · ${new Date(s.created).toLocaleDateString()}${d!=null?' · '+fmtDist(d)+' away':''}</div>
       </div>
@@ -1466,6 +1559,34 @@ function paintSites(){
 /* ======================================================================
    SITE DETAIL  (the "curate later" half)
    ====================================================================== */
+/* BUILD 11: on a wide screen the record opens in the right-hand pane instead of a sheet. */
+const isDesk = () => window.matchMedia('(min-width: 1000px)').matches;
+function sitePhotosHTML(s){
+  return photosOf(s.id).map((p, i) => '<div class="cell"><img src="' + photoURL(p) + '" data-pid="' + p.id + '" alt=""><span class="n">' +
+    (i + 1) + (p.up && p.up.done ? ' ☁' : '') + '</span></div>').join('');
+}
+function mountSite(s, html){
+  if(!isDesk()){ openSheet(html); return; }
+  if(!$('#v-sites').classList.contains('on')) showView('sites');
+  closeSheet();
+  const pane = $('#siteDetail'); pane.innerHTML = html; pane.scrollTop = 0;
+  S.deskSite = s.id; paintSites();
+}
+function clearDesk(){
+  S.deskSite = null;
+  $('#siteDetail').innerHTML = '<div class="empty"><span class="ic">🗂</span>Pick a site on the left to see its record and photos.</div>';
+  paintSites();
+}
+/* Photos arriving from the other device refresh the open record's photos — never its form. */
+function paintDeskPhotos(){
+  if(!isDesk() || !S.deskSite) return;
+  const s = S.all.sites.get(S.deskSite), g = $('#siteDetail #sitePhotos'); if(!s || !g) return;
+  if(s.deleted){ clearDesk(); return; }
+  g.innerHTML = sitePhotosHTML(s);
+  const h = $('#sitePhotosH'); if(h) h.textContent = 'Photos (' + photosOf(s.id).length + ')';
+  $$('#siteDetail #sitePhotos img').forEach(im => im.onclick = () => openViewer(im.dataset.pid, s.id));
+}
+
 function openSite(id){
   const s = S.sites.find(x=>x.id===id); if(!s) return;
   const c = catById(s.category), ph = photosOf(s.id);
@@ -1496,17 +1617,19 @@ function openSite(id){
       : `<div class="sec-h">${esc(g.g)}</div>${carried}${rows}`;
   }).join('');
 
-  openSheet(`
+  const desk = isDesk(), R = desk ? '#siteDetail' : '#sheetcontent';
+  const before = JSON.parse(JSON.stringify(s));   // what the form started from: only what YOU change is saved
+  const html = (`
     <h2>${c.ic} <span id="siteTitle">${esc(s.name)}</span></h2>
 
     <label class="f"><span>Name of feature</span><input type="text" id="f_name" maxlength="255" value="${esc(s.name)}"></label>
     <label class="f"><span>Category</span><select id="f_cat">${
       S.cats.map(x=>`<option value="${x.id}" ${x.id===s.category?'selected':''}>${x.ic} ${esc(x.name)}</option>`).join('')}</select></label>
 
-    <div class="sec-h">Photos (${ph.length})</div>
-    <div class="pgrid" id="sitePhotos">${
-      ph.map((p,i)=>`<div class="cell"><img src="${photoURL(p)}" data-pid="${p.id}" alt=""><span class="n">${i+1}</span></div>`).join('')
-    }</div>
+    <div class="sens"><div><div class="t">🔒 Sensitive location</div><div class="d">Its position is left off stamped copies, and exports mark it private. For archaeological sites and graves that could be disturbed.</div></div><div class="tg ${s.sensitive?'on':''}" id="f_sens" role="switch" aria-label="Sensitive location"></div></div>
+
+    <div class="sec-h" id="sitePhotosH">Photos (${ph.length})</div>
+    <div class="pgrid" id="sitePhotos">${sitePhotosHTML(s)}</div>
     <div class="btnrow" style="margin-top:9px">
       <button class="btn" id="addMore">📷 Add photo</button>
       <button class="btn" id="addLib">🖼 From library</button>
@@ -1535,10 +1658,11 @@ function openSite(id){
       <button class="btn danger" id="delSite">🗑 Delete site</button>
     </div>
   `);
+  mountSite(s, html);
 
   // live character counters, so a 260-character Description is caught here and not
   // silently chopped when it reaches ArcGIS
-  $$('#sheetcontent [data-k]').forEach(el => {
+  $$(R + ' [data-k]').forEach(el => {
     const c = $('#c_' + el.dataset.k); if(!c) return;
     const max = +el.getAttribute('maxlength');
     const paint = () => { c.textContent = el.value.length + '/' + max; c.classList.toggle('over', el.value.length >= max); };
@@ -1546,7 +1670,8 @@ function openSite(id){
   });
 
   // multi-select chips
-  $$('#sheetcontent [data-multi] .chip').forEach(b => b.onclick = () => b.classList.toggle('on'));
+  $$(R + ' [data-multi] .chip').forEach(b => b.onclick = () => b.classList.toggle('on'));
+  $('#f_sens').onclick = e => e.currentTarget.classList.toggle('on');
 
   $$('#sitePhotos img').forEach(im => im.onclick = () => openViewer(im.dataset.pid, s.id));
 
@@ -1569,7 +1694,7 @@ function openSite(id){
     if(!S.pos){ toast('No GPS fix yet'); return; }
     s.lat=S.pos.lat; s.lon=S.pos.lon; s.acc=S.pos.acc; s.alt=S.pos.alt;
     if(S.hdg!=null) s.heading=S.hdg;
-    s.updated=Date.now(); await dbPut('sites',s);
+    await putSite(s, ['pos']);
     toast('Position updated'); closeSheet(); openSite(s.id); refreshAll();
   };
   $('#copyGps').onclick = () => {
@@ -1577,18 +1702,26 @@ function openSite(id){
     if(t && navigator.clipboard){ navigator.clipboard.writeText(t); toast('Copied '+t); }
   };
 
+  /* BUILD 11: the form is compared with how it was when opened, and only the fields YOU changed are
+     saved, each with its own time. A change that arrived from the other device meanwhile, in a
+     field you didn't touch, is kept — not quietly overwritten by what this form happened to show. */
   $('#saveSite').onclick = async () => {
-    s.name = $('#f_name').value.trim() || s.name;
-    s.category = $('#f_cat').value;
-    $$('#sheetcontent [data-k]').forEach(el => { s.fields[el.dataset.k] = el.value; });
-    $$('#sheetcontent [data-multi]').forEach(box => {
-      s.fields[box.dataset.multi] = [...box.querySelectorAll('.chip.on')].map(c=>c.dataset.v).join(', ');
+    const after = JSON.parse(JSON.stringify(before));
+    after.name = $('#f_name').value.trim() || before.name;
+    after.category = $('#f_cat').value;
+    after.sensitive = $('#f_sens').classList.contains('on');
+    after.fields = Object.assign({}, before.fields || {});
+    $$(R + ' [data-k]').forEach(el => { after.fields[el.dataset.k] = el.value; });
+    $$(R + ' [data-multi]').forEach(box => {
+      after.fields[box.dataset.multi] = [...box.querySelectorAll('.chip.on')].map(c=>c.dataset.v).join(', ');
     });
-    if(!s.fields.GISCORDS) s.fields.GISCORDS = gisCords(s.lat, s.lon);
-    s.updated = Date.now();
-    await dbPut('sites', s);
+    if(!after.fields.GISCORDS) after.fields.GISCORDS = gisCords(s.lat, s.lon);
+    const keys = changedKeys('site', before, after).filter(k => k !== 'pos' && k !== 'deleted');
+    for(const k of keys) setKey('site', s, k, getKey('site', after, k));
+    await putSite(s, keys);
     rememberSticky(s);
-    refreshAll(); closeSheet(); toast('Saved');
+    refreshAll(); closeSheet(); toast(keys.length ? 'Saved' : 'Nothing had changed');
+    if(desk) openSite(s.id);
   };
 
   $('#mapSite').onclick = () => { closeSheet(); showView('map'); setTimeout(()=>focusSite(s), 260); };
@@ -1601,16 +1734,14 @@ function openSite(id){
 
   $('#delSite').onclick = () => {
     openSheet(`<h2>Delete ${esc(s.name)}?</h2>
-      <p class="hint" style="margin:-4px 0 15px">This removes the record and all ${ph.length} photo${ph.length===1?'':'s'}. It cannot be undone.</p>
-      <button class="btn danger full" id="delYes" style="margin-bottom:9px">🗑 Yes, delete permanently</button>
+      <p class="hint" style="margin:-4px 0 15px">The record and its ${ph.length} photo${ph.length===1?'':'s'} move to <b>Deleted items</b>, under More, where they can be restored — on every device.</p>
+      <button class="btn danger full" id="delYes" style="margin-bottom:9px">🗑 Yes, delete it</button>
       <button class="btn full" id="delNo">Keep it</button>`);
     $('#delNo').onclick = () => { closeSheet(); openSite(s.id); };
     $('#delYes').onclick = async () => {
-      for(const p of ph){ await dbDel('photos', p.id); const u=S.urls.get(p.id); if(u){URL.revokeObjectURL(u);S.urls.delete(p.id);} }
-      await dbDel('sites', s.id);
-      S.photos = S.photos.filter(p=>p.siteId!==s.id);
-      S.sites  = S.sites.filter(x=>x.id!==s.id);
-      refreshAll(); closeSheet(); toast('Deleted');
+      await trashSite(s);
+      refreshAll(); closeSheet(); if(desk) clearDesk();
+      toast('Deleted — restore it from Deleted items, under More', 3200);
     };
   };
 }
@@ -1636,7 +1767,7 @@ async function openViewer(pid, siteId){
     vzReset();
     drawBar();
     $('#viewerImg').src = photoURL(p);
-    if(!showing) return;
+    if(!showing || !(screenBlob(p) || (origFile(p) || {}).blob)) return;   // BUILD 11: nothing to stamp until it is sent
     if(!stamped) stamped = await stamp(p, s);
     if(v._showing !== token || !showing) return;
     const su = URL.createObjectURL(stamped);
@@ -1666,6 +1797,7 @@ async function openViewer(pid, siteId){
         <div class="kv"><span class="k">Pixels</span><span class="v">${p.w} × ${p.h}</span></div>
         <div class="kv"><span class="k">Saved at</span><span class="v">${sizeLabel(p)}</span></div>
         <div class="kv"><span class="k">File size</span><span class="v">${fmtBytes(p.size)}</span></div>
+        <div class="kv"><span class="k">Online copy</span><span class="v">${p.up&&p.up.done?'Sent '+fmtTime(p.up.at):'Not sent yet'}</span></div>
         <button class="btn full" id="pBack" style="margin-top:14px">← Back to site</button>`);
       $('#pBack').onclick = () => { closeSheet(); openSite(siteId); };
     };
@@ -1680,16 +1812,14 @@ async function openViewer(pid, siteId){
         '<button class="btn full" id="mvBack" style="margin-top:10px">← Back</button>');
       $$('#sheetcontent [data-mv]').forEach(b => b.onclick = async () => {
         const dest = b.dataset.mv;
-        p.siteId = dest; await dbPut('photos', p);
+        p.siteId = dest; await putPhoto(p, ['siteId']);
         closeSheet(); refreshAll(); openSite(dest);
         toast('Moved to ' + (S.sites.find(x => x.id === dest) || {}).name);
       });
       $('#mvBack').onclick = () => { closeSheet(); openSite(siteId); };
     };
     $('#vDel').onclick = async () => {
-      await dbDel('photos', p.id);
-      const u=S.urls.get(p.id); if(u){URL.revokeObjectURL(u);S.urls.delete(p.id);}
-      S.photos = S.photos.filter(x=>x.id!==p.id);
+      await trashPhoto(p);                           // BUILD 11: restorable from Deleted items
       v.classList.remove('on'); refreshAll(); closeSheet(); openSite(siteId); toast('Photo deleted');
     };
   };
@@ -1736,7 +1866,7 @@ function paintMap(){
     const ph = photosOf(s.id);
     m.bindPopup(`<div style="min-width:150px;font:14px -apple-system,sans-serif">
       ${ph.length?`<img src="${photoURL(ph[0])}" style="width:100%;border-radius:6px;margin-bottom:6px">`:''}
-      <b>${esc(s.name)}</b><br><span style="color:#666;font-size:15px">${esc(c.name)}<br>${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</span>
+      <b>${esc(s.name)}</b>${s.sensitive?' 🔒':''}<br><span style="color:#666;font-size:15px">${esc(c.name)}<br>${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</span>
       </div>`);
     m.on('popupopen', () => {
       const el = m.getPopup().getElement();
@@ -1772,13 +1902,13 @@ function extraFieldDefs(){ return FIELDS.filter(g=>g.extra).flatMap(g=>g.f); }
 function csvSites(sites = S.sites){
   const extra = extraFieldDefs();
   const head = [...TEMPLATE_ORDER,
-                'site_id','latitude','longitude','accuracy_m','elevation_ft',
+                'site_id','sensitive','latitude','longitude','accuracy_m','elevation_ft',
                 'facing_deg','facing_cardinal','photo_count','first_recorded_iso','last_updated_iso',
                 ...extra.map(f=>f.k)];
   const rows = sites.map(s=>{
     const ph = photosOf(s.id);
     return [...TEMPLATE_ORDER.map(k=>templateValue(s,k)),
-      s.id, s.lat??'', s.lon??'', s.acc!=null?s.acc.toFixed(1):'', s.alt!=null?Math.round(s.alt*3.28084):'',
+      s.id, s.sensitive?'yes':'', s.lat??'', s.lon??'', s.acc!=null?s.acc.toFixed(1):'', s.alt!=null?Math.round(s.alt*3.28084):'',
       s.heading!=null?s.heading.toFixed(0):'', s.heading!=null?cardinal(s.heading):'',
       ph.length, new Date(s.created).toISOString(), new Date(s.updated).toISOString(),
       ...extra.map(f=>s.fields[f.k]??'')];
@@ -1820,7 +1950,7 @@ function geojson(sites = S.sites){
         // his template first, spelled his way
         ...Object.fromEntries(TEMPLATE_ORDER.map(k=>[k, templateValue(s,k) === '' ? null : templateValue(s,k)])),
         // then what the app knows that his template has no column for
-        site_id:s.id,
+        site_id:s.id, sensitive:!!s.sensitive,
         accuracy_m:s.acc??null, facing_deg:s.heading??null, facing_cardinal:s.heading!=null?cardinal(s.heading):null,
         photo_count:photosOf(s.id).length,
         first_recorded:new Date(s.created).toISOString(), last_updated:new Date(s.updated).toISOString(),
@@ -1883,14 +2013,15 @@ async function exportZip(sites, label, btn){
     zip.file('For ArcGIS/photos.csv', csvPhotos(sites));
     zip.file('For ArcGIS/sites.geojson', geojson(sites));
     const reduced = photos.filter(p => (origFile(p) || {}).fullSize !== true).length;
-    zip.file('README.txt', exportReadme(sites.length, photos.length, reduced));
-    let n = 0;
+    let n = 0, missing = 0;
     for(const st of sites){
       const sp = paths.get(st.id), ph = photosOf(st.id);
       for(let i = 0; i < ph.length; i++){
         const o = origFile(ph[i]);
-        if(o && o.blob) zip.file(photoPath(sp, i, ph[i]), o.blob, { binary: true });
-        if(S.settings.stampCopies){
+        let ob = o && o.blob;
+        if(!ob && ph[i].up && ph[i].up.done){ try{ ob = await fetchOriginal(ph[i]); }catch(e){ ob = null; } }   // BUILD 11: taken on another device
+        if(ob) zip.file(photoPath(sp, i, ph[i]), ob, { binary: true }); else missing++;
+        if(S.settings.stampCopies && (screenBlob(ph[i]) || (o && o.blob))){
           const stamped = await stamp(ph[i], st);
           zip.file('Stamped copies/' + sp.cat + '/' + sp.site + '/' + sp.site + ' ' + photoNum(i) + ' stamped.jpg', stamped, { binary: true });
         }
@@ -1898,6 +2029,8 @@ async function exportZip(sites, label, btn){
         if(btn) btn.textContent = '⏳ Photo ' + n + ' of ' + photos.length + '…';
       }
     }
+    zip.file('README.txt', exportReadme(sites.length, photos.length, reduced, missing, sites.filter(x => x.sensitive).length,
+      sites.some(x => x.fields && (x.fields.owner || x.fields.ownerInfo))));
     if(btn) btn.textContent = '⏳ Zipping…';
     const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
     download(blob, 'History Scout ' + safeName(label) + ' ' + stampDate() + '.zip');
@@ -1909,7 +2042,7 @@ async function exportZip(sites, label, btn){
 
 /* The README says what is actually in the export — no more "unmodified originals" when they
    weren't. */
-function exportReadme(nSites, nPhotos, reduced){
+function exportReadme(nSites, nPhotos, reduced, missing, nSensitive, hasOwners){
   const lines = [
     'HISTORY SCOUT EXPORT',
     'Generated ' + new Date().toString(),
@@ -1921,6 +2054,9 @@ function exportReadme(nSites, nPhotos, reduced){
     '                 camera handed it to History Scout: never stamped, never re-saved, with the',
     '                 camera’s own information still inside. Ready to edit.',
     reduced ? '                 ' + reduced + ' of them were saved before BUILD 9 or in "save space" mode and may be reduced to 2,400 pixels. photos.csv says which (full_size column).' : null,
+    missing ? '                 ' + missing + ' photo(s) are not in this export: they were taken on another device and not sent yet. Press Send on that device, then export again.' : null,
+    nSensitive ? 'SENSITIVE: ' + nSensitive + ' site(s) are marked sensitive (the "sensitive" column says yes). Their positions ARE in these files - keep them private.' : null,
+    hasOwners ? 'PRIVATE: the owner and ownerInfo columns hold landowner contact details - remove them before sharing these files.' : null,
     S.settings.stampCopies ? 'Stamped copies/  A second copy of each photo with the site, position and heading burned in, at most 4,000 pixels.' : null,
     'For ArcGIS/      sites.csv (your MASTER_Point_Template columns first), photos.csv (one row per',
     '                 photo; "file" is where it sits in this export), sites.geojson.',
@@ -1960,7 +2096,8 @@ function paintCats(){
   }).join('');
   $$('#catManage [data-del]').forEach(b => b.onclick = async () => {
     S.cats = S.cats.filter(c=>c.id!==b.dataset.del);
-    await saveCats(); paintCats(); paintFilters(); toast('Category removed');
+    S.catGone = S.catGone || {}; S.catGone[b.dataset.del] = now(); S.catsDirty = true;
+    await saveCats(); Sync.soon(); paintCats(); paintFilters(); toast('Category removed');
   });
 }
 $('#btnAddCat').onclick = async () => {
@@ -1968,8 +2105,9 @@ $('#btnAddCat').onclick = async () => {
   if(!nm) return;
   if(S.cats.some(c=>c.name.toLowerCase()===nm.toLowerCase())){ toast('Already have that one'); return; }
   const palette = ['#A97BA0','#5C8CA8','#A88A5C','#7E9E6B','#B0705E','#8A8FA8','#9E7B5C'];
-  S.cats.push({id:'c_'+uid(), name:nm, ic:'📌', color:palette[S.cats.length % palette.length]});
-  await saveCats();
+  const nc = {id:'c_'+uid(), name:nm, ic:'📌', color:palette[S.cats.length % palette.length]};
+  S.cats.push(nc); S.catAll = (S.catAll || []).concat([nc]); S.catT = S.catT || {}; S.catT[nc.id] = now(); S.catsDirty = true;
+  await saveCats(); Sync.soon();
   $('#newCatName').value='';
   paintCats(); paintFilters(); toast('Added '+nm);
 };
@@ -2001,6 +2139,7 @@ function runDiag(){
     ['JSZip (export)', typeof JSZip!=='undefined', typeof JSZip!=='undefined'?'loaded':'offline / blocked'],
     ['EXIF reader', typeof EXIF!=='undefined', typeof EXIF!=='undefined'?'loaded':'offline / blocked'],
     ['Service worker', 'serviceWorker' in navigator, navigator.serviceWorker && navigator.serviceWorker.controller ? 'offline ready' : 'not controlling yet'],
+    ['Account', S.acct.state==='ok', S.acct.mode==='account' ? (S.acct.state + (S.acct.email ? ' · ' + S.acct.email : '')) : 'none — this device only'],
     ['Online', navigator.onLine, navigator.onLine?'':'map tiles will come from cache']
   ];
   $('#diag').innerHTML = rows.map(([k,ok,note])=>
@@ -2042,7 +2181,7 @@ function showView(v){
   $('#v-'+v).classList.add('on');
   $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   if(v==='map'){ initMap(); setTimeout(()=>{ map.invalidateSize(); paintMap(); }, 60); }
-  if(v==='more'){ paintStorage(); runDiag(); paintCats(); paintSettings(); paintVersion(); }
+  if(v==='more'){ paintAcct(); paintStorage(); runDiag(); paintCats(); paintSettings(); paintVersion(); }
 }
 $$('#tabs button').forEach(b => b.onclick = () => showView(b.dataset.v));
 $('#btnCompass').onclick = () => enableCompass();
@@ -2064,6 +2203,767 @@ $('#btnHdgHelp').onclick = () => { openSheet(`
 };
 
 /* ======================================================================
+   BUILD 11 — YOUR RECORDS ON EVERY DEVICE
+   The device's own storage stays the working copy: History Scout opens and captures with no
+   signal and no account, exactly as before. With an account, every change is also copied to a
+   private online store, and changes made on another device come back.
+
+   The trap it is built around: the online store on its own keeps whichever edit ARRIVES last,
+   not whichever was MADE last — so a phone that was out of signal all afternoon would overwrite
+   the evening's work on the PC when it reconnected. So every record carries the time each part
+   of it was changed (_t), and when two copies meet, each part keeps its newest value. The phone
+   renaming a site while the PC fills in its notes: both survive.
+   ====================================================================== */
+const FB_VERSION = '12.19.0';
+/* The app's address in Google's system — not a password. What protects the records is the
+   security rules (firestore.rules, storage.rules): only you, signed in with a confirmed email
+   that has been approved, can reach your own records and photos. */
+const FB_CONFIG = {
+  apiKey: 'AIzaSyBF197Gux0BAXIJUgS-Zicg-A-NC94Ef58',
+  authDomain: 'history-scout-app.firebaseapp.com',
+  projectId: 'history-scout-app',
+  storageBucket: 'history-scout-app.firebasestorage.app',
+  messagingSenderId: '482017443099',
+  appId: '1:482017443099:web:4f01580b513d18a9df27be'
+};
+
+/* ---------- the working copy: every record, deleted ones included ---------- */
+S.all  = { sites: new Map(), photos: new Map() };
+S.acct = { mode: null, uid: null, email: null, dataOwner: null, approved: false, admin: false, state: 'none' };
+S.trashN = 0;
+const now = () => Date.now();
+
+/* The parts of a record that are tracked, each with its own change-time. A site also tracks
+   every form field on its own, as 'f.<field>'. Position is one part: latitude, longitude,
+   accuracy, elevation and heading always change together. */
+const SITE_KEYS  = ['name', 'category', 'pos', 'sensitive', 'deleted'];
+const PHOTO_KEYS = ['siteId', 'note', 'deleted', 'up'];
+const keysOf = (kind, r) => kind === 'site'
+  ? [...SITE_KEYS, ...Object.keys((r && r.fields) || {}).map(k => 'f.' + k)]
+  : PHOTO_KEYS.slice();
+
+function getKey(kind, r, k){
+  if(!r) return null;
+  if(kind === 'site'){
+    if(k === 'pos') return { lat: r.lat ?? null, lon: r.lon ?? null, acc: r.acc ?? null, alt: r.alt ?? null, heading: r.heading ?? null };
+    if(k.startsWith('f.')) return (r.fields || {})[k.slice(2)] ?? '';
+    if(k === 'sensitive') return !!r.sensitive;
+  }
+  if(k === 'deleted') return r.deleted || 0;
+  if(k === 'note') return r.note || '';
+  return r[k] ?? null;
+}
+function setKey(kind, r, k, v){
+  if(kind === 'site'){
+    if(k === 'pos'){ v = v || {}; r.lat = v.lat ?? null; r.lon = v.lon ?? null; r.acc = v.acc ?? null; r.alt = v.alt ?? null; r.heading = v.heading ?? null; return; }
+    if(k.startsWith('f.')){ r.fields = r.fields || {}; r.fields[k.slice(2)] = v; return; }
+  }
+  r[k] = v;
+}
+const sameVal = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+/* Which tracked parts differ between two versions of the same record. */
+function changedKeys(kind, before, after){
+  const ks = new Set([...keysOf(kind, before), ...keysOf(kind, after)]);
+  return [...ks].filter(k => !sameVal(getKey(kind, before, k), getKey(kind, after, k)));
+}
+
+/* Records made before BUILD 11 have no change-times. Each part is dated by the record's own
+   last-changed time — the best honest guess — once, and the record is marked to go online. */
+function stampLegacy(kind, r){
+  if(r._t) return false;
+  const t = r.updated || r.created || r.takenAt || now();
+  r._t = {};
+  for(const k of keysOf(kind, r)) r._t[k] = t;
+  r.dirty = true;
+  return true;
+}
+
+/* Two copies of one record meet: each part keeps whichever was changed most recently. On a tie
+   the copies already agree, or were changed in the same millisecond; the local one is kept. */
+function mergeRec(kind, local, remote){
+  if(!remote) return local;
+  const out = Object.assign({}, remote, local || {});
+  out.fields = Object.assign({}, remote.fields || {}, (local && local.fields) || {});
+  const lt = (local && local._t) || {}, rt = remote._t || {};
+  out._t = {};
+  for(const k of new Set([...Object.keys(lt), ...Object.keys(rt)])){
+    const fromRemote = !local || (rt[k] || 0) > (lt[k] || 0);
+    setKey(kind, out, k, getKey(kind, fromRemote ? remote : local, k));
+    out._t[k] = Math.max(lt[k] || 0, rt[k] || 0);
+  }
+  out.updated = Math.max((local && local.updated) || 0, remote.updated || 0);
+  if(kind === 'photo'){                                   // the photo files themselves never come from the record
+    out.files = (local && local.files) || [];
+    out.display = (local && local.display) || null;
+  }
+  delete out.dirty; delete out.rev;
+  if(local){ out.dirty = local.dirty; out.rev = local.rev; }
+  return out;
+}
+
+/* ---------- what the screens show ----------
+   Deleted sites and photos — and the photos of a deleted site — drop out of every screen but
+   stay in storage, where "Deleted items" can bring them back. */
+function rebuild(){
+  const live = [...S.all.sites.values()].filter(x => !x.deleted);
+  S.sites = live.sort((a, b) => (b.created || 0) - (a.created || 0));
+  const liveIds = new Set(live.map(x => x.id));
+  S.photos = [...S.all.photos.values()].filter(p => !p.deleted && (!p.siteId || liveIds.has(p.siteId)));
+  S.trashN = [...S.all.sites.values()].filter(x => x.deleted).length +
+             [...S.all.photos.values()].filter(p => p.deleted && liveIds.has(p.siteId)).length;
+  if(S.currentSiteId && !liveIds.has(S.currentSiteId)) S.currentSiteId = null;
+}
+
+/* Every change to a record goes through these two. The parts that changed get the time now;
+   the record is saved on this device first — always — and then copied online if there is an
+   account and a signal. 'rev' counts local changes, so a change made WHILE a copy is going up
+   is never marked as sent by mistake. */
+async function putSite(site, keys){
+  if(keys && keys.length){
+    const t = now(); site._t = site._t || {};
+    for(const k of keys) site._t[k] = t;
+    site.updated = t; site.dirty = true; site.rev = (site.rev || 0) + 1;
+  }
+  await dbPut('sites', site);
+  S.all.sites.set(site.id, site); rebuild();
+  if(keys && keys.length) Sync.soon();
+}
+async function putPhoto(p, keys){
+  if(keys && keys.length){
+    const t = now(); p._t = p._t || {};
+    for(const k of keys) p._t[k] = t;
+    p.updated = t; p.dirty = true; p.rev = (p.rev || 0) + 1;
+  }
+  await dbPut('photos', p);
+  S.all.photos.set(p.id, p); rebuild();
+  if(keys && keys.length) Sync.soon();
+}
+/* Deleting marks, never erases: the other device has to hear about it, and it can be undone. */
+const trashSite  = s => { s.deleted = now(); return putSite(s, ['deleted']); };
+const trashPhoto = p => { p.deleted = now(); return putPhoto(p, ['deleted']); };
+const restoreSite  = s => { s.deleted = 0; return putSite(s, ['deleted']); };
+const restorePhoto = p => { p.deleted = 0; return putPhoto(p, ['deleted']); };
+
+/* ---------- Firebase, loaded only when there is an account ----------
+   The Firebase code is fetched the first time it is needed and saved by the service worker, so a
+   phone with no account never loads it, and a phone with one still opens with no signal. */
+const FB = { ready: null, m: null };
+function fbLoad(){
+  if(FB.ready) return FB.ready;
+  const base = 'https://www.gstatic.com/firebasejs/' + FB_VERSION + '/firebase-';
+  FB.ready = Promise.all(['app', 'auth', 'firestore', 'storage'].map(n => import(base + n + '.js')))
+    .then(([app, auth, fst, st]) => {
+      FB.m = { app, auth, fs: fst, st };
+      FB.app  = app.initializeApp(FB_CONFIG);
+      /* Stays signed in, in this device's own storage. The sign-in pop-up machinery is not
+         loaded: it would reach for the network every time the app opened. */
+      FB.auth = auth.initializeAuth(FB.app, { persistence: [auth.indexedDBLocalPersistence, auth.browserLocalPersistence] });
+      FB.db   = fst.initializeFirestore(FB.app, { ignoreUndefinedProperties: true });
+      FB.st   = st.getStorage(FB.app);
+      auth.onAuthStateChanged(FB.auth, u => { if(S.acct.mode === 'account') Acct.evaluate(u); });
+      return FB;
+    })
+    .catch(err => { FB.ready = null; throw err; });
+  return FB.ready;
+}
+
+/* ---------- the account ----------
+   mode: null (never asked — show the sign-in page), 'local' (this device only), 'account'.
+   state: 'none' | 'signedout' | 'verify' (email not confirmed yet) | 'waiting' (not approved yet)
+          | 'ok' | 'otheruser' | 'offline' | 'error'. */
+const saveAcct = () => dbPut('meta', { k: 'account', v: { mode: S.acct.mode, uid: S.acct.uid, email: S.acct.email,
+  dataOwner: S.acct.dataOwner, approved: S.acct.approved } });
+
+function authError(err){
+  const c = (err && err.code) || '';
+  return ({
+    'auth/invalid-credential': 'That email and password don’t match an account.',
+    'auth/wrong-password': 'That email and password don’t match an account.',
+    'auth/user-not-found': 'That email and password don’t match an account.',
+    'auth/invalid-email': 'That doesn’t look like an email address.',
+    'auth/email-already-in-use': 'That email already has an account — use Sign in instead.',
+    'auth/weak-password': 'Choose a password of at least 8 characters.',
+    'auth/too-many-requests': 'Too many tries — wait a few minutes and try again.',
+    'auth/network-request-failed': 'No connection — try again when you have signal.'
+  })[c] || ('Something went wrong: ' + ((err && err.message) || c));
+}
+
+const Acct = {
+  user: () => (FB.auth && FB.auth.currentUser) || null,
+
+  async signIn(email, pw){
+    await fbLoad();
+    const cred = await FB.m.auth.signInWithEmailAndPassword(FB.auth, email.trim(), pw);
+    S.acct.mode = 'account'; await saveAcct();
+    await Acct.evaluate(cred.user);
+  },
+
+  /* A request for access makes the account at the same time — with the password the person
+     chooses — sends the confirm-your-email message, and files the request for the owner. */
+  async request(name, email, pw, note){
+    await fbLoad();
+    const cred = await FB.m.auth.createUserWithEmailAndPassword(FB.auth, email.trim(), pw);
+    try{ await FB.m.auth.sendEmailVerification(cred.user); }catch(e){ console.warn('verification email', e); }
+    const f = FB.m.fs;
+    await f.setDoc(f.doc(FB.db, 'accessRequests', cred.user.uid),
+      { email: cred.user.email, name: name.trim().slice(0, 80), note: (note || '').trim().slice(0, 500), at: f.serverTimestamp() });
+    S.acct.mode = 'account'; await saveAcct();
+    await Acct.evaluate(cred.user);
+  },
+
+  async resetPassword(email){
+    await fbLoad();
+    await FB.m.auth.sendPasswordResetEmail(FB.auth, email.trim());
+  },
+
+  async resendConfirm(){
+    const u = Acct.user(); if(!u) return;
+    await FB.m.auth.sendEmailVerification(u);
+  },
+
+  /* After the email link is clicked, or the owner approves: read the account afresh. The
+     "confirmed" mark only reaches the security rules once the sign-in token is renewed. */
+  async recheck(){
+    const u = Acct.user(); if(!u) return;
+    await u.reload();
+    await u.getIdToken(true);
+    await Acct.evaluate(FB.auth.currentUser);
+  },
+
+  async evaluate(user){
+    if(!user){ S.acct.state = 'signedout'; Sync.stop(); paintAcct(); return; }
+    S.acct.uid = user.uid; S.acct.email = user.email;
+    /* This device's records already belong to a different account: never mix two people's sites. */
+    if(S.acct.dataOwner && S.acct.dataOwner !== user.uid && S.all.sites.size){
+      S.acct.state = 'otheruser'; Sync.stop(); paintAcct(); return;
+    }
+    if(!user.emailVerified){ S.acct.state = 'verify'; paintAcct(); return; }
+    try{
+      const f = FB.m.fs;
+      const a = await f.getDoc(f.doc(FB.db, 'allowlist', user.email.toLowerCase()));
+      S.acct.approved = a.exists();
+      if(S.acct.approved){
+        const ad = await f.getDoc(f.doc(FB.db, 'admins', user.uid));
+        S.acct.admin = ad.exists();
+      }
+      S.acct.state = S.acct.approved ? 'ok' : 'waiting';
+    }catch(err){
+      console.warn('access check', err);
+      S.acct.state = S.acct.approved ? 'ok' : (navigator.onLine ? 'error' : 'offline');
+    }
+    await saveAcct();
+    paintAcct();
+    if(S.acct.state === 'ok') Sync.start();
+  },
+
+  async signOut(){
+    Sync.stop();
+    if(FB.auth) await FB.m.auth.signOut(FB.auth);
+    S.acct.mode = 'local'; S.acct.state = 'signedout'; S.acct.approved = false; S.acct.admin = false;
+    await saveAcct(); paintAcct();
+  }
+};
+
+/* ---------- keeping the copies in step ---------- */
+/* What goes online for a record: everything except the photo files themselves and the
+   bookkeeping that only matters on this device. */
+const SITE_OUT  = ['id', 'name', 'category', 'lat', 'lon', 'acc', 'alt', 'heading', 'created', 'updated', 'sensitive', 'deleted', 'fields', '_t'];
+const PHOTO_OUT = ['id', 'siteId', 'takenAt', 'lat', 'lon', 'acc', 'alt', 'gpsSource', 'heading', 'headingSource', 'exifDir',
+                   'w', 'h', 'size', 'note', 'deleted', 'up', 'updated', 'origMeta', '_t'];
+function toRemote(kind, r){
+  const out = {};
+  for(const k of (kind === 'site' ? SITE_OUT : PHOTO_OUT)) if(r[k] !== undefined) out[k] = r[k];
+  if(kind === 'photo'){
+    const o = (r.files || []).find(f => f.role === 'original');
+    if(o) out.origMeta = { type: o.type || '', name: o.name || '', size: o.size || 0, w: o.w || null, h: o.h || null, fullSize: o.fullSize ?? null };
+  }
+  return out;
+}
+function fromRemote(kind, id, d){
+  const r = Object.assign({}, d, { id: id });
+  if(kind === 'site'){ r.fields = r.fields || {}; }
+  else { r.v = 2; r.files = []; r.display = null; }
+  return r;
+}
+/* Bring a merged copy into the record already in memory, in place — an open form holds that
+   same record, so it must never be swapped for a different object behind the form's back. */
+function applyInPlace(cur, next){
+  for(const k of Object.keys(next)) cur[k] = next[k];
+  return cur;
+}
+
+const Sync = {
+  on: false, unsubs: [], timer: null, pushing: false, again: false, lastOk: 0, err: null, busy: false,
+
+  soon(){ clearTimeout(Sync.timer); Sync.timer = setTimeout(() => Sync.push(), 1200); paintSyncLine(); },
+  ref(col, id){ return FB.m.fs.doc(FB.db, 'users', S.acct.uid, col, id); },
+  col(col){ return FB.m.fs.collection(FB.db, 'users', S.acct.uid, col); },
+  dirtyN(){ let n = 0; for(const m of [S.all.sites, S.all.photos]) for(const r of m.values()) if(r.dirty) n++; return n + (S.catsDirty ? 1 : 0); },
+
+  start(){
+    if(Sync.on || S.acct.state !== 'ok' || !FB.m) return;
+    Sync.on = true;
+    if(!S.acct.dataOwner){ S.acct.dataOwner = S.acct.uid; saveAcct(); }   // this device's records now belong to this account
+    const f = FB.m.fs;
+    Sync.unsubs.push(f.onSnapshot(Sync.col('sites'),  snap => Sync.incoming('site', snap),  err => Sync.fail(err)));
+    Sync.unsubs.push(f.onSnapshot(Sync.col('photos'), snap => Sync.incoming('photo', snap), err => Sync.fail(err)));
+    Sync.unsubs.push(f.onSnapshot(Sync.ref('meta', 'cats'), d => Sync.incomingCats(d), err => Sync.fail(err)));
+    Sync.push();
+    paintSyncLine();
+  },
+  stop(){
+    Sync.on = false;
+    for(const u of Sync.unsubs){ try{ u(); }catch(e){} }
+    Sync.unsubs = [];
+    paintSyncLine();
+  },
+  fail(err){ console.warn('sync', err); Sync.err = err; paintSyncLine(); },
+
+  /* Changes arriving from the other device. Each record is merged part by part; if this device
+     holds newer parts, the record stays marked to go back up. */
+  async incoming(kind, snap){
+    const store = kind === 'site' ? 'sites' : 'photos', map = kind === 'site' ? S.all.sites : S.all.photos;
+    let changed = 0;
+    for(const ch of snap.docChanges()){
+      if(ch.type === 'removed') continue;                  // records are never removed online, only marked deleted
+      const remote = fromRemote(kind, ch.doc.id, ch.doc.data());
+      const cur = map.get(remote.id);
+      const merged = mergeRec(kind, cur || null, remote);
+      const ahead = changedKeys(kind, remote, merged).length > 0;   // this device knows something newer
+      if(cur && !changedKeys(kind, cur, merged).length && !ahead) continue;
+      merged.dirty = ahead || !!(cur && cur.dirty && ahead);
+      const rec = cur ? applyInPlace(cur, merged) : merged;
+      await dbPut(store, rec);
+      map.set(rec.id, rec);
+      changed++;
+    }
+    if(changed){ rebuild(); refreshSoft(); if(Sync.dirtyN()) Sync.soon(); }
+    Sync.lastOk = now(); Sync.err = null; paintSyncLine();
+  },
+
+  /* Changes made here, going up. Each one is a transaction: read the online copy, merge part by
+     part, write the result — so a newer change already online is never overwritten. */
+  async push(){
+    if(!Sync.on) return;
+    if(Sync.pushing){ Sync.again = true; return; }
+    if(!navigator.onLine){ paintSyncLine(); return; }
+    Sync.pushing = true; Sync.again = false; paintSyncLine();
+    const f = FB.m.fs;
+    try{
+      for(const [col, kind, map] of [['sites', 'site', S.all.sites], ['photos', 'photo', S.all.photos]]){
+        for(const r of [...map.values()].filter(x => x.dirty)){
+          const rev = r.rev || 0, ref = Sync.ref(col, r.id);
+          const merged = await f.runTransaction(FB.db, async t => {
+            const snap = await t.get(ref);
+            const m = mergeRec(kind, r, snap.exists() ? fromRemote(kind, r.id, snap.data()) : null);
+            t.set(ref, toRemote(kind, m));
+            return m;
+          });
+          const cur = map.get(r.id);
+          const meanwhile = (cur.rev || 0) !== rev;        // edited again while this copy was going up
+          const next = meanwhile ? mergeRec(kind, cur, merged) : merged;
+          next.dirty = meanwhile; next.rev = cur.rev;
+          applyInPlace(cur, next);
+          await dbPut(col, cur);
+        }
+      }
+      if(S.catsDirty) await Sync.pushCats();
+      Sync.lastOk = now(); Sync.err = null;
+    }catch(err){
+      console.warn('sync push', err); Sync.err = err;
+      setTimeout(() => Sync.soon(), 30000);                // no signal, or a hiccup: try again shortly
+    }finally{
+      Sync.pushing = false; rebuild(); refreshSoft(); paintSyncLine();
+      if(Sync.again) Sync.soon();
+    }
+  },
+
+  /* Categories: one small list. A category is added or removed with a time, and the newer of
+     "added" and "removed" wins, so a category removed on one device doesn't come back from the other. */
+  async incomingCats(d){
+    if(!d.exists()) { if(S.catT && Object.keys(S.catT).length) { S.catsDirty = true; Sync.soon(); } return; }
+    const merged = mergeCats(localCats(), d.data());
+    const before = catSig(localCats());
+    setLocalCats(merged);
+    if(catSig(localCats()) !== before){ await saveCats(); refreshSoft(); paintCats(); }
+    if(catSig(merged) !== catSig(d.data())){ S.catsDirty = true; Sync.soon(); }
+  },
+  async pushCats(){
+    const f = FB.m.fs, ref = Sync.ref('meta', 'cats');
+    const merged = await f.runTransaction(FB.db, async t => {
+      const snap = await t.get(ref);
+      const m = mergeCats(localCats(), snap.exists() ? snap.data() : null);
+      t.set(ref, m);
+      return m;
+    });
+    setLocalCats(merged); S.catsDirty = false; await saveCats();
+  }
+};
+
+const catSig = m => JSON.stringify({ l: (m.list || []).map(c => [c.id, c.name, c.ic, c.color].join('|')).sort(),
+  t: Object.entries(m.t || {}).sort(), g: Object.entries(m.gone || {}).sort() });
+/* Categories as they travel: every category ever known, with when it was added (t) and removed (gone). */
+function localCats(){ return { list: S.catAll || S.cats, t: S.catT || {}, gone: S.catGone || {} }; }
+function mergeCats(a, b){
+  if(!b) return a;
+  const byId = new Map(), t = {}, gone = {};
+  for(const side of [b, a]){
+    for(const c of side.list || []){
+      const tt = (side.t || {})[c.id] || 0;
+      if(!byId.has(c.id) || tt >= (t[c.id] || 0)){ byId.set(c.id, c); t[c.id] = Math.max(tt, t[c.id] || 0); }
+    }
+    for(const [id, g] of Object.entries(side.gone || {})) gone[id] = Math.max(g, gone[id] || 0);
+  }
+  return { list: [...byId.values()], t: t, gone: gone };
+}
+function setLocalCats(m){
+  S.catAll = m.list; S.catT = m.t; S.catGone = m.gone;
+  S.cats = m.list.filter(c => !((m.gone[c.id] || 0) > (m.t[c.id] || 0)));
+  if(!S.cats.length) S.cats = DEFAULT_CATS.slice();
+}
+
+/* ---------- Send: photos go up only when you say so ----------
+   Photo storage does not wait for signal and forgets a half-finished upload if the app closes.
+   So a photo counts as sent only when Google confirms its copy at the exact size; until then it
+   is simply sent again next time. Nothing is ever removed from this device. */
+const hasLocal = p => { const o = origFile(p); return !!(o && o.blob); };
+const Send = {
+  running: false, cancel: false, task: null, done: 0, total: 0, bytesDone: 0, bytesTotal: 0, err: null, lastResult: '',
+
+  pending(){ return [...S.all.photos.values()].filter(p => !p.deleted && !(p.up && p.up.done) && hasLocal(p) &&
+                     S.all.sites.has(p.siteId) && !S.all.sites.get(p.siteId).deleted); },
+  pendingBytes(){ return Send.pending().reduce((a, p) => a + origFile(p).blob.size + (p.display ? p.display.size : 0), 0); },
+
+  async run(){
+    if(Send.running) return;
+    if(S.acct.state !== 'ok'){ toast('Sign in first — under More'); return; }
+    const list = Send.pending();
+    if(!list.length){ toast('Every photo is already sent'); return; }
+    Send.running = true; Send.cancel = false; Send.err = null; Send.done = 0; Send.total = list.length;
+    Send.bytesDone = 0; Send.bytesTotal = Send.pendingBytes();
+    let lock = null;
+    try{ if(navigator.wakeLock) lock = await navigator.wakeLock.request('screen'); }catch(e){}   // keep the screen awake while sending
+    paintSend();
+    try{
+      for(const p of list){
+        if(Send.cancel) break;
+        await Send.one(p);
+        Send.done++; paintSend();
+      }
+    }catch(err){
+      Send.err = err; console.warn('send', err);
+    }finally{
+      Send.running = false; Send.task = null;
+      if(lock){ try{ lock.release(); }catch(e){} }
+      Send.lastResult = Send.err
+        ? (Send.cancel || (Send.err.code === 'storage/canceled') ? 'Stopped. ' : 'Stopped: ' + (Send.err.message || Send.err.code) + ' ') +
+          Send.done + ' of ' + Send.total + ' sent — press Send again to carry on.'
+        : Send.cancel ? 'Stopped. ' + Send.done + ' of ' + Send.total + ' sent — press Send again to carry on.'
+        : 'All ' + Send.done + ' photo' + (Send.done === 1 ? '' : 's') + ' sent and confirmed.';
+      paintSend(); paintAcct(); paintSyncLine();
+      toast(Send.lastResult, 3600);
+    }
+  },
+
+  async one(p){
+    const o = origFile(p);
+    const base = 'users/' + S.acct.uid + '/photos/' + p.id + '/';
+    const origPath = base + 'original.' + fileExt(o), dispPath = base + 'display.jpg';
+    const om = await Send.file(origPath, o.blob, o.type || 'image/jpeg');
+    const dm = p.display ? await Send.file(dispPath, p.display, 'image/jpeg') : null;
+    p.up = { done: true, at: now(), orig: { path: origPath, size: +om.size }, disp: dm ? { path: dispPath, size: +dm.size } : null };
+    await putPhoto(p, ['up']);
+  },
+
+  /* One file. Already there at the right size — an earlier Send stopped after uploading but before
+     recording it — counts as sent. Otherwise upload it, then read it back. The storage rules refuse
+     to replace a file, so a copy online is never overwritten. */
+  async file(path, blob, type){
+    const st = FB.m.st, ref = st.ref(FB.st, path);
+    try{
+      const md = await st.getMetadata(ref);
+      if(+md.size === blob.size){ Send.bytesDone += blob.size; return md; }
+      throw Object.assign(new Error('a different file is already stored for this photo, and was left alone'), { code: 'hs/mismatch' });
+    }catch(err){
+      if(err.code !== 'storage/object-not-found') throw err;
+    }
+    const start = Send.bytesDone;
+    await new Promise((res, rej) => {
+      const task = st.uploadBytesResumable(ref, blob, { contentType: type });
+      Send.task = task;
+      task.on('state_changed', snap => { Send.bytesDone = start + snap.bytesTransferred; paintSend(); }, rej, res);
+    });
+    const md = await st.getMetadata(ref);
+    if(+md.size !== blob.size) throw new Error('the online copy came back a different size');
+    Send.bytesDone = start + blob.size;
+    return md;
+  },
+
+  stop(){ Send.cancel = true; if(Send.task){ try{ Send.task.cancel(); }catch(e){} } }
+};
+
+/* ---------- photos taken on the other device ----------
+   Their records arrive at once; the pictures only once the phone has sent them. The screen-sized
+   copy is fetched when it is first shown and kept on this device, so it shows next time with no
+   signal. Full-size originals are fetched only when asked for — zooming in, or exporting. */
+const Fetch = { busy: new Set() };
+async function fetchDisplay(p){
+  if(!p.up || !p.up.done || Fetch.busy.has(p.id) || S.acct.state !== 'ok' || !FB.m) return;
+  Fetch.busy.add(p.id);
+  try{
+    const st = FB.m.st, path = (p.up.disp || p.up.orig).path;
+    p.display = await st.getBlob(st.ref(FB.st, path));
+    await dbPut('photos', p);
+    const u = S.urls.get(p.id); if(u){ URL.revokeObjectURL(u); S.urls.delete(p.id); }
+    refreshSoft();
+  }catch(err){ console.warn('fetch photo', p.id, err); }
+  finally{ Fetch.busy.delete(p.id); }
+}
+async function fetchOriginal(p){
+  if(!p.up || !p.up.done || S.acct.state !== 'ok' || !FB.m) return null;
+  const st = FB.m.st;
+  return st.getBlob(st.ref(FB.st, p.up.orig.path));
+}
+
+/* A change from the other device repaints lists and the map — never an open form, which would
+   throw away what is being typed. */
+let _softT = null;
+function refreshSoft(){ clearTimeout(_softT); _softT = setTimeout(() => { refreshAll(); if(typeof paintDeskPhotos === 'function') paintDeskPhotos(); }, 250); }
+
+/* ---------- one plain line on Capture: is this backed up? ---------- */
+function paintSyncLine(){
+  const el = $('#syncLine'); if(!el) return;
+  const a = S.acct, pend = Send.pending().length;
+  let t = '', warn = false;
+  if(a.mode !== 'account' || a.state === 'signedout' || a.state === 'none'){
+    t = '⚠ Not backed up — on this phone only. Sign in under More to keep a copy online.'; warn = true;
+  } else if(a.state === 'verify'){ t = '✉ Confirm your email to start backing up — see More.'; warn = true; }
+  else if(a.state === 'waiting'){ t = '⏳ Waiting for approval — your records stay on this phone until then.'; warn = true; }
+  else if(a.state === 'otheruser'){ t = '⚠ This phone’s records belong to a different account — see More.'; warn = true; }
+  else if(a.state === 'ok' || a.state === 'offline' || a.state === 'error'){
+    const d = Sync.dirtyN();
+    if(!navigator.onLine || a.state !== 'ok') t = d ? '⏳ ' + d + ' change' + (d === 1 ? '' : 's') + ' waiting for signal — safe on this phone.' : '☁ Records backed up.';
+    else if(Sync.pushing || d) t = '↻ Backing up…';
+    else if(Sync.err) { t = '⚠ Couldn’t reach your account just now — your records are safe here and will go up shortly.'; warn = true; }
+    else t = '☁ Records backed up.';
+    if(pend) t += ' · ' + pend + ' photo' + (pend === 1 ? '' : 's') + ' to Send.';
+  }
+  el.hidden = !t; el.textContent = t; el.classList.toggle('warn', warn);
+}
+window.addEventListener('online',  () => { paintSyncLine(); if(S.acct.mode === 'account' && S.acct.state !== 'ok' && Acct.user()) Acct.evaluate(Acct.user()); else Sync.soon(); });
+window.addEventListener('offline', paintSyncLine);
+
+/* ---------- the sign-in page ----------
+   Seen once, on first opening. After signing in — or choosing to go without — History Scout opens
+   straight to Capture every time, signal or not. */
+function showGate(on){ $('#gate').classList.toggle('on', !!on); }
+$('#gLocal').onclick = async () => {
+  S.acct.mode = 'local'; S.acct.state = 'none'; await saveAcct();
+  showGate(false); paintAcct(); paintSyncLine();
+  toast('Your records stay on this phone. Sign in any time under More.', 3200);
+};
+$('#gSignIn').onclick  = () => openSignIn();
+$('#gRequest').onclick = () => openRequest();
+
+const setMsg = (id, text, cls) => { const el = $('#' + id); if(el){ el.textContent = text || ''; el.className = 'formmsg' + (cls ? ' ' + cls : ''); } };
+
+function openSignIn(){
+  openSheet('<h2>Sign in to History Scout</h2>' +
+    '<p class="formmsg" id="siMsg"></p>' +
+    '<label class="f"><span>Email</span><input type="email" id="siEmail" autocomplete="username" autocapitalize="off" spellcheck="false" value="' + esc(S.acct.email || '') + '"></label>' +
+    '<label class="f"><span>Password</span><input type="password" id="siPw" autocomplete="current-password"></label>' +
+    '<button class="btn pri full" id="siGo">Sign in</button>' +
+    '<div class="btnrow" style="margin-top:8px"><button class="btn" id="siForgot">Forgot password?</button><button class="btn" id="siReq">Request access</button></div>' +
+    '<button class="btn full" id="siCancel" style="margin-top:8px">Cancel</button>');
+  $('#siCancel').onclick = closeSheet;
+  $('#siReq').onclick = openRequest;
+  $('#siForgot').onclick = async () => {
+    const em = $('#siEmail').value.trim();
+    if(!em){ setMsg('siMsg', 'Type your email above first, then tap Forgot password.', 'bad'); return; }
+    try{ await Acct.resetPassword(em); setMsg('siMsg', 'If that email has an account, a message to reset the password is on its way.', 'good'); }
+    catch(err){ setMsg('siMsg', authError(err), 'bad'); }
+  };
+  $('#siGo').onclick = async () => {
+    const em = $('#siEmail').value.trim(), pw = $('#siPw').value;
+    if(!em || !pw){ setMsg('siMsg', 'Type your email and password.', 'bad'); return; }
+    const b = $('#siGo'); b.disabled = true; setMsg('siMsg', 'Signing in…');
+    try{
+      await Acct.signIn(em, pw);
+      closeSheet(); showGate(false);
+      toast(S.acct.state === 'ok' ? 'Signed in — your records are being backed up' :
+            S.acct.state === 'verify' ? 'Signed in — confirm your email to start backing up' :
+            S.acct.state === 'waiting' ? 'Signed in — waiting for approval' : 'Signed in', 3200);
+    }catch(err){ setMsg('siMsg', authError(err), 'bad'); b.disabled = false; }
+  };
+}
+
+function openRequest(){
+  openSheet('<h2>Request access</h2>' +
+    '<p class="hint" style="margin:-4px 0 12px">History Scout is being tested with a few people. Choose a password now; once the owner approves you, your records are backed up to your own private account.</p>' +
+    '<p class="formmsg" id="rqMsg"></p>' +
+    '<label class="f"><span>Your name</span><input type="text" id="rqName" maxlength="80" autocomplete="name"></label>' +
+    '<label class="f"><span>Email</span><input type="email" id="rqEmail" autocomplete="username" autocapitalize="off" spellcheck="false"></label>' +
+    '<label class="f"><span>Choose a password (8 or more characters)</span><input type="password" id="rqPw" autocomplete="new-password"></label>' +
+    '<label class="f"><span>What you record (optional)</span><textarea id="rqNote" maxlength="500" placeholder="A county historical society, family cemeteries, old homesteads…"></textarea></label>' +
+    '<button class="btn pri full" id="rqGo">Send request</button>' +
+    '<button class="btn full" id="rqCancel" style="margin-top:8px">Cancel</button>');
+  $('#rqCancel').onclick = closeSheet;
+  $('#rqGo').onclick = async () => {
+    const nm = $('#rqName').value.trim(), em = $('#rqEmail').value.trim(), pw = $('#rqPw').value, note = $('#rqNote').value;
+    if(!nm || !em){ setMsg('rqMsg', 'Type your name and email.', 'bad'); return; }
+    if(pw.length < 8){ setMsg('rqMsg', 'Choose a password of at least 8 characters.', 'bad'); return; }
+    const b = $('#rqGo'); b.disabled = true; setMsg('rqMsg', 'Sending…');
+    try{
+      await Acct.request(nm, em, pw, note);
+      showGate(false);
+      openSheet('<h2>Request sent</h2>' +
+        '<p class="hint">Two things happen next:</p>' +
+        '<p class="hint"><b>1. Confirm your email.</b> A message is on its way to ' + esc(em) + '. Tap the link in it.</p>' +
+        '<p class="hint"><b>2. The owner approves you.</b> Until then History Scout works normally, and your records stay on this phone. Once you are approved they are added to your account.</p>' +
+        '<button class="btn pri full" id="rqOk" style="margin-top:8px">OK</button>');
+      $('#rqOk').onclick = closeSheet;
+    }catch(err){ setMsg('rqMsg', authError(err), 'bad'); b.disabled = false; }
+  };
+}
+
+/* ---------- the account card, top of More ---------- */
+function paintAcct(){
+  const box = $('#acctBody'); if(!box) return;
+  const a = S.acct, em = esc(a.email || '');
+  const trash = '<button class="btn full" id="acTrash" style="margin-top:8px">🗑 Deleted items' + (S.trashN ? ' (' + S.trashN + ')' : '') + '</button>';
+  let h = '';
+  if(a.mode !== 'account' || a.state === 'signedout' || a.state === 'none'){
+    h = '<p class="hint" style="margin:0 0 11px"><b>Not signed in.</b> Your records are on this device only — not backed up.</p>' +
+        '<div class="btnrow"><button class="btn pri" id="acIn">Sign in</button><button class="btn" id="acReq">Request access</button></div>' + trash;
+  } else if(a.state === 'verify'){
+    h = '<p class="hint" style="margin:0 0 11px">Signed in as <b>' + em + '</b>.<br><b>Confirm your email:</b> open the message from History Scout and tap its link, then come back here.</p>' +
+        '<button class="btn pri full" id="acRecheck">I’ve confirmed it</button>' +
+        '<div class="btnrow" style="margin-top:8px"><button class="btn" id="acResend">Send it again</button><button class="btn" id="acOut">Sign out</button></div>' + trash;
+  } else if(a.state === 'waiting'){
+    h = '<p class="hint" style="margin:0 0 11px">Signed in as <b>' + em + '</b>.<br><b>Waiting for approval.</b> The owner has your request. Your records stay on this device until then.</p>' +
+        '<div class="btnrow"><button class="btn pri" id="acRecheck">Check again</button><button class="btn" id="acOut">Sign out</button></div>' + trash;
+  } else if(a.state === 'otheruser'){
+    h = '<p class="hint" style="margin:0 0 11px">Signed in as <b>' + em + '</b>, but the records on this device belong to a <b>different account</b> — the one that first backed them up. Nothing is mixed: sign in with that account to carry on backing them up.</p>' +
+        '<button class="btn full" id="acOut">Sign out</button>' + trash;
+  } else if(a.state === 'offline' || a.state === 'error'){
+    h = '<p class="hint" style="margin:0 0 11px">Signed in as <b>' + em + '</b>. Can’t reach your account right now — everything is safe on this device.</p>' +
+        '<div class="btnrow"><button class="btn pri" id="acRecheck">Try again</button><button class="btn" id="acOut">Sign out</button></div>' + trash;
+  } else {
+    const d = Sync.dirtyN(), all = S.photos.length, pend = Send.pending().length, sent = S.photos.filter(p => p.up && p.up.done).length;
+    const rec = !navigator.onLine ? (d ? '⏳ ' + d + ' change' + (d === 1 ? '' : 's') + ' waiting for signal' : '☁ Backed up')
+              : (Sync.pushing || d) ? '↻ Backing up…' : Sync.err ? '⚠ Couldn’t reach your account just now' : '☁ Backed up';
+    h = '<div class="kv"><span class="k">Signed in as</span><span class="v">' + em + '</span></div>' +
+        '<div class="kv"><span class="k">Records</span><span class="v">' + rec + '</span></div>' +
+        '<div class="kv" style="border:0"><span class="k">Photos online</span><span class="v">' + sent + ' of ' + all + '</span></div>' +
+        (pend
+          ? '<button class="btn pri full" id="acSend" style="margin-top:10px">📤 Send ' + pend + ' photo' + (pend === 1 ? '' : 's') + ' · ' + fmtBytes(Send.pendingBytes()) + '</button>'
+          : '<p class="hint" style="margin:10px 0 0">Every photo on this device is sent.</p>') +
+        '<div id="sendBox"></div>' +
+        '<p class="hint" style="margin:10px 0 0">Send on Wi-Fi — photos are large. Keep History Scout open until it finishes: iPhones stop web apps sending in the background. Your photos stay on this device too.</p>' +
+        trash +
+        (a.admin ? '<button class="btn full" id="acAdmin" style="margin-top:8px">👥 Access requests</button>' : '') +
+        '<button class="btn full" id="acOut" style="margin-top:8px">Sign out</button>';
+  }
+  box.innerHTML = h;
+  const on = (id, fn) => { const el = $('#' + id); if(el) el.onclick = fn; };
+  on('acIn', openSignIn); on('acReq', openRequest); on('acTrash', openTrash); on('acAdmin', openRequests);
+  on('acSend', () => Send.run());
+  on('acRecheck', async () => { toast('Checking…'); try{ await Acct.recheck(); }catch(err){ toast(authError(err), 3200); } paintSyncLine(); });
+  on('acResend', async () => { try{ await Acct.resendConfirm(); toast('Sent — check your email', 3000); }catch(err){ toast(authError(err), 3200); } });
+  on('acOut', () => {
+    openSheet('<h2>Sign out?</h2><p class="hint" style="margin:-4px 0 14px">Your records and photos stay on this device. They just stop being backed up until you sign in again.' +
+      (Sync.dirtyN() ? ' <b>' + Sync.dirtyN() + ' change' + (Sync.dirtyN() === 1 ? ' has' : 's have') + ' not gone up yet.</b>' : '') + '</p>' +
+      '<button class="btn danger full" id="soYes" style="margin-bottom:9px">Sign out</button><button class="btn full" id="soNo">Stay signed in</button>');
+    $('#soNo').onclick = closeSheet;
+    $('#soYes').onclick = async () => { await Acct.signOut(); closeSheet(); paintSyncLine(); toast('Signed out'); };
+  });
+  paintSend();
+}
+
+/* ---------- Send's progress ---------- */
+function paintSend(){
+  const box = $('#sendBox'); if(!box) return;
+  if(Send.running){
+    const pct = Send.bytesTotal ? Math.min(100, Math.round(Send.bytesDone / Send.bytesTotal * 100)) : 0;
+    box.innerHTML = '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
+      '<p class="hint" style="margin:0">Sending photo ' + Math.min(Send.done + 1, Send.total) + ' of ' + Send.total + ' · ' +
+      fmtBytes(Send.bytesDone) + ' of ' + fmtBytes(Send.bytesTotal) + '</p>' +
+      '<button class="btn full" id="sendStop" style="margin-top:8px">Stop</button>';
+    $('#sendStop').onclick = () => Send.stop();
+    const b = $('#acSend'); if(b) b.disabled = true;
+  } else {
+    box.innerHTML = Send.lastResult ? '<p class="formmsg ' + (Send.err ? 'bad' : 'good') + '" style="margin:10px 0 0">' + esc(Send.lastResult) + '</p>' : '';
+  }
+}
+
+/* ---------- Deleted items ----------
+   Nothing deleted is erased. A deleted site takes its photos with it and brings them back with it. */
+function openTrash(){
+  const sites = [...S.all.sites.values()].filter(x => x.deleted).sort((a, b) => b.deleted - a.deleted);
+  const photos = [...S.all.photos.values()].filter(p => p.deleted && S.all.sites.has(p.siteId) && !S.all.sites.get(p.siteId).deleted)
+    .sort((a, b) => b.deleted - a.deleted);
+  const when = t => new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  const row = (thumb, title, sub, attr) => '<div class="row-item">' + thumb + '<div class="meta">' + title + '<div class="sub">' + sub + '</div></div>' +
+    '<button class="btn" ' + attr + '>Restore</button></div>';
+  let h = '<h2>Deleted items</h2><p class="hint" style="margin:-4px 0 12px">Nothing here is erased. Restore brings it back on every device.</p>';
+  if(!sites.length && !photos.length) h += '<p class="empty" style="padding:24px 10px">Nothing has been deleted.</p>';
+  if(sites.length){
+    h += '<div class="sec-h">Sites</div>' + sites.map(x => {
+      const n = [...S.all.photos.values()].filter(p => p.siteId === x.id && !p.deleted).length, c = catById(x.category);
+      return row('<div class="thumbsm">' + c.ic + '</div>', esc(x.name), 'Deleted ' + when(x.deleted) + ' · ' + n + ' photo' + (n === 1 ? '' : 's'), 'data-rs="' + x.id + '"');
+    }).join('');
+  }
+  if(photos.length){
+    h += '<div class="sec-h">Photos</div>' + photos.map(p => {
+      const st = S.all.sites.get(p.siteId);
+      const th = screenBlob(p) ? '<img class="thumbsm" src="' + photoURL(p) + '" alt="">' : '<div class="thumbsm">📷</div>';
+      return row(th, 'From ' + esc(st ? st.name : '—'), 'Taken ' + fmtTime(p.takenAt) + ' · deleted ' + when(p.deleted), 'data-rp="' + p.id + '"');
+    }).join('');
+  }
+  h += '<button class="btn full" id="trClose" style="margin-top:14px">Done</button>';
+  openSheet(h);
+  $('#trClose').onclick = closeSheet;
+  $$('#sheetcontent [data-rs]').forEach(b => b.onclick = async () => { const x = S.all.sites.get(b.dataset.rs); if(x){ await restoreSite(x); refreshAll(); paintAcct(); toast('Restored ' + x.name); openTrash(); } });
+  $$('#sheetcontent [data-rp]').forEach(b => b.onclick = async () => { const p = S.all.photos.get(b.dataset.rp); if(p){ await restorePhoto(p); refreshAll(); paintAcct(); toast('Photo restored'); openTrash(); } });
+}
+
+/* ---------- Access requests — the owner only ----------
+   Approve puts the email on the list the security rules check; nothing else changes. */
+async function openRequests(){
+  openSheet('<h2>Access requests</h2><p class="hint" id="arMsg">Loading…</p><div id="arList"></div><button class="btn full" id="arClose" style="margin-top:14px">Done</button>');
+  $('#arClose').onclick = closeSheet;
+  const f = FB.m.fs;
+  try{
+    const [reqs, allow] = await Promise.all([f.getDocs(f.collection(FB.db, 'accessRequests')), f.getDocs(f.collection(FB.db, 'allowlist'))]);
+    const when = ts => ts && ts.toDate ? ts.toDate().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    let h = '<div class="sec-h">Waiting (' + reqs.size + ')</div>';
+    h += reqs.size ? reqs.docs.map(d => { const r = d.data();
+      return '<div class="row-item"><div class="meta"><b>' + esc(r.name) + '</b> · ' + esc(r.email) + '<div class="sub">' + esc(when(r.at)) + (r.note ? ' — ' + esc(r.note) : '') + '</div></div>' +
+        '<button class="btn pri" data-ap="' + d.id + '">Approve</button><button class="btn" data-dn="' + d.id + '">Decline</button></div>'; }).join('')
+      : '<p class="hint">No one is waiting.</p>';
+    h += '<div class="sec-h">Approved (' + allow.size + ')</div>' + allow.docs.map(d => { const r = d.data();
+      return '<div class="row-item"><div class="meta">' + esc(d.id) + '<div class="sub">' + esc(r.name || '') + '</div></div>' +
+        (d.id === (S.acct.email || '').toLowerCase() ? '' : '<button class="btn danger" data-rm="' + esc(d.id) + '">Remove</button>') + '</div>'; }).join('');
+    $('#arList').innerHTML = h; $('#arMsg').textContent = '';
+    const byId = new Map(reqs.docs.map(d => [d.id, d.data()]));
+    $$('#arList [data-ap]').forEach(b => b.onclick = async () => {
+      const r = byId.get(b.dataset.ap); b.disabled = true;
+      await f.setDoc(f.doc(FB.db, 'allowlist', r.email.toLowerCase()), { name: r.name || '', approvedAt: f.serverTimestamp(), by: S.acct.uid });
+      await f.deleteDoc(f.doc(FB.db, 'accessRequests', b.dataset.ap));
+      toast('Approved ' + r.email); openRequests();
+    });
+    $$('#arList [data-dn]').forEach(b => b.onclick = async () => {
+      b.disabled = true; await f.deleteDoc(f.doc(FB.db, 'accessRequests', b.dataset.dn)); toast('Declined'); openRequests();
+    });
+    $$('#arList [data-rm]').forEach(b => b.onclick = async () => {
+      if(!confirm('Remove access for ' + b.dataset.rm + '? Their records stay in their account, but they can no longer reach them.')) return;
+      b.disabled = true; await f.deleteDoc(f.doc(FB.db, 'allowlist', b.dataset.rm)); toast('Access removed'); openRequests();
+    });
+  }catch(err){ $('#arMsg').textContent = 'Couldn’t load the requests: ' + (err.message || err.code); }
+}
+
+/* ======================================================================
    BOOT
    ====================================================================== */
 function refreshAll(){
@@ -2071,6 +2971,8 @@ function refreshAll(){
   if(map) paintMap();
   paintRecBar();
   paintLastShot();
+  paintSyncLine();
+  if($('#v-more').classList.contains('on')) paintAcct();
   $('#kSites').textContent  = S.sites.length;
   $('#kPhotos').textContent = S.photos.length;
 }
@@ -2085,6 +2987,11 @@ function refreshAll(){
   }
   paintSettings();
   refreshAll();
+  /* BUILD 11: the sign-in page on first opening only; after that, straight to work, signal or not. */
+  if(!S.acct.mode) showGate(true);
+  if(S.acct.mode === 'account') fbLoad().catch(err => { console.warn('firebase', err); S.acct.state = S.acct.approved ? 'offline' : 'offline'; paintAcct(); paintSyncLine(); });
+  if(isDesk()) showView('sites');
+  paintSyncLine();
   startGPS();
   if('serviceWorker' in navigator && location.protocol !== 'file:'){
     navigator.serviceWorker.register('sw.js').catch(()=>{});

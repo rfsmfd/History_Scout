@@ -1,0 +1,24 @@
+rules_version = '2';
+
+// History Scout — security rules for photo storage (BUILD 11).
+//
+// Photos live under users/{uid}/photos/{photoId}/. Only that person, with a verified email
+// that the owner has approved, may look at them or add to them.
+//
+// Nothing here can be replaced or deleted by the app. The online copy is the photos' second
+// copy and is kept for good, so a file, once sent, stays exactly as it arrived.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function approved(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && firestore.exists(/databases/(default)/documents/allowlist/$(request.auth.token.email.lower()));
+    }
+
+    match /users/{uid}/{allPaths=**} {
+      allow read: if approved(uid);
+      allow create: if approved(uid) && request.resource.size < 250 * 1024 * 1024;
+    }
+  }
+}

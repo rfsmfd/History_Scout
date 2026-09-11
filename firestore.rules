@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// History Scout — security rules for the records database (BUILD 11).
+//
+// Everyone's records live under users/{their uid}. Only that person can read or write them,
+// and only once their email address is verified AND the owner has approved it (the allowlist).
+// Anyone can create an account; an account alone opens nothing.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    function myEmail()  { return request.auth.token.email.lower(); }
+    function approved() { return verified() && exists(/databases/$(database)/documents/allowlist/$(myEmail())); }
+    function isAdmin()  { return verified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+
+    // A person's own sites, photo records and categories.
+    match /users/{uid}/{document=**} {
+      allow read, write: if approved() && request.auth.uid == uid;
+    }
+
+    // "Am I approved?" Each person may look up only their own entry. The owner manages the list.
+    match /allowlist/{email} {
+      allow get: if signedIn() && myEmail() == email;
+      allow read, write: if isAdmin();
+    }
+
+    // Who the owner is. Set by hand with admin tools, never by the app.
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Requests for access: one per account, made by that account, read and cleared by the owner.
+    match /accessRequests/{uid} {
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'name', 'note', 'at'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string && request.resource.data.name.size() <= 80
+        && request.resource.data.note is string && request.resource.data.note.size() <= 500
+        && request.resource.data.at == request.time;
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow read, delete: if isAdmin();
+    }
+  }
+}
