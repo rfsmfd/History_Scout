@@ -5,7 +5,7 @@
      - libraries + map tiles: CACHE FIRST
        => tiles you've already looked at keep working with no signal
    Bump BUILD to match index.html when you ship.  */
-const BUILD = 7;
+const BUILD = 8;
 const APP   = 'hs-app-v' + BUILD;
 const LIB   = 'hs-lib-v1';
 const TILES = 'hs-tiles-v1';
@@ -58,8 +58,20 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // 1. the app shell — network first
-  if (isAppItself) {
+  /* 0. Never touch sw.js. It is how the app asks "is there a newer build?", so a
+        cached answer is worse than useless.
+
+        This check used to live down in rule 4, AFTER the shell rule. In BUILD 7 the
+        shell rule was accidentally written as `if (isAppItself)` — testing the
+        function instead of calling it, which is always true — so every request fell
+        into the shell rule, this one included, and the update check was saved AS
+        THE APP. With no signal, History Scout opened as a page of its own source
+        code. Checking sw.js first means no mistake further down can ever route it
+        into the cache again. Fixed in BUILD 8. */
+  if (url.origin === location.origin && url.pathname.endsWith('sw.js')) return;
+
+  // 1. the app shell — network first. CALL it: a bare `isAppItself` is always true.
+  if (isAppItself(req, url)) {
     e.respondWith(shellResponse(req));
     return;
   }
@@ -78,10 +90,6 @@ self.addEventListener('fetch', e => {
 
   // 4. same-origin assets — cache first
   if (url.origin === location.origin) {
-    /* Never cache sw.js. It is how the app asks "is there a newer build?", so a
-       cached answer is worse than useless — and every check carries a unique
-       ?t= value, so caching them just piles up entries nothing ever reads. */
-    if (url.pathname.endsWith('sw.js')) return;
     e.respondWith(cacheFirst(req, APP));
   }
 });
