@@ -570,7 +570,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 12;
+const BUILD = 13;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -2991,51 +2991,95 @@ async function openRequests(){
    downloads one ZIP per site instead.
    ====================================================================== */
 const canFolders = () => typeof window.showDirectoryPicker === 'function';
-const BI = { photos: null, records: null, names: {}, running: false, result: '', problems: [] };
+
+/* BUILD 13: two ways to be set up.
+     'one'   — one folder, and History Scout makes "Photos" and "Records" inside it. What anyone
+               who buys the app gets, because they should not have to plan a filing system first.
+     'split' — two folders chosen separately: his own arrangement, photos on the big drive and the
+               records beside his GIS. Kept exactly as it was; a setup already made is never asked
+               about again.
+   Windows hands a web page the folder, never its address, so the full path can only be typed in —
+   one optional box, used to write full paths into the photos list for ArcGIS. */
+const BI = { mode: null, one: null, photos: null, records: null, names: {}, path: '', advanced: false,
+             running: false, result: '', problems: [] };
 
 async function biLoad(){
   const m = await dbGet('meta', 'folders');
-  if(m && m.v){ BI.photos = m.v.photos || null; BI.records = m.v.records || null; BI.names = m.v.names || {}; }
+  if(!(m && m.v)) return;
+  const v = m.v;
+  BI.one = v.one || null; BI.photos = v.photos || null; BI.records = v.records || null;
+  BI.names = v.names || {}; BI.path = v.path || '';
+  BI.mode = v.mode || (v.one ? 'one' : (v.photos && v.records) ? 'split' : null);   // BUILD 12 saved no mode
 }
-const biSave = () => dbPut('meta', { k: 'folders', v: { photos: BI.photos, records: BI.records, names: BI.names } });
+const biSave = () => dbPut('meta', { k: 'folders', v: { mode: BI.mode, one: BI.one, photos: BI.photos,
+  records: BI.records, names: BI.names, path: BI.path } });
+const biSet = () => BI.mode === 'one' ? !!BI.one : BI.mode === 'split' ? !!(BI.photos && BI.records) : false;
 
 /* Chrome remembers the folder itself, but not always the permission — it is asked for again after a
    restart. That ask has to come from a button press, which is why it happens here and not at startup. */
 async function biPermit(h){
   if(!h) return false;
-  if(typeof h.queryPermission !== "function") return true;   // a browser that does not ask again, or a folder handed in by a test
+  if(typeof h.queryPermission !== 'function') return true;   // a browser that does not ask again, or a folder handed in by a test
   try{
     if(await h.queryPermission({ mode: 'readwrite' }) === 'granted') return true;
     return await h.requestPermission({ mode: 'readwrite' }) === 'granted';
   }catch(err){ return false; }
 }
-/* Is the folder actually there? An unplugged D: drive shows up here, before anything is written. */
+/* Is the folder actually there? An unplugged drive shows up here, before anything is written. */
 async function biReachable(h){
   try{ for await (const _ of h.values()) break; return true; }catch(err){ return false; }
 }
 
+/* One folder: Photos and Records are made at once, so they can be seen in File Explorer straight away. */
+async function biPickOne(){
+  try{
+    const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'hs-one', startIn: 'documents' });
+    if(!(await biPermit(h))){ toast('History Scout needs permission for that folder'); return; }
+    await h.getDirectoryHandle('Photos', { create: true });
+    await h.getDirectoryHandle('Records', { create: true });
+    BI.mode = 'one'; BI.one = h; BI.names.one = h.name; BI.advanced = false;
+    await biSave(); paintPC();
+    toast('History Scout keeps your files in ' + h.name + ' — Photos and Records are inside it', 3600);
+  }catch(err){ if(err.name !== 'AbortError') toast('Could not use that folder: ' + err.message, 3400); }
+}
+/* Two folders: his way. */
 async function biPick(which){
   try{
     const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'hs-' + which, startIn: 'documents' });
-    BI[which] = h; BI.names[which] = h.name;
+    if(!(await biPermit(h))){ toast('History Scout needs permission for that folder'); return; }
+    BI[which] = h; BI.names[which] = h.name; BI.mode = 'split';
     await biSave(); paintPC();
     toast('Folder chosen: ' + h.name);
   }catch(err){ if(err.name !== 'AbortError') toast('Could not use that folder: ' + err.message, 3400); }
 }
 
+/* Where things are written, whichever way it was set up. */
+async function biRoots(){
+  if(BI.mode === 'one'){
+    const nm = BI.names.one || '';
+    return { photos: await BI.one.getDirectoryHandle('Photos', { create: true }),
+             records: await BI.one.getDirectoryHandle('Records', { create: true }),
+             photosName: nm + '\\Photos', recordsName: nm + '\\Records', inside: 'Photos\\' };
+  }
+  return { photos: BI.photos, records: BI.records,
+           photosName: BI.names.photos || '', recordsName: BI.names.records || '', inside: '' };
+}
+
 async function biReady(){
-  if(!BI.photos || !BI.records){ toast('Choose both folders first'); return false; }
-  for(const [k, what] of [['photos', 'photo folder'], ['records', 'records folder']]){
-    if(!(await biPermit(BI[k]))){ toast('History Scout needs permission for the ' + what + ' — press the button again and allow it', 4200); return false; }
-    if(!(await biReachable(BI[k]))){
+  if(!biSet()){ toast('Choose a folder first'); return null; }
+  const tops = BI.mode === 'one' ? [[BI.one, 'folder', BI.names.one]]
+                                 : [[BI.photos, 'photo folder', BI.names.photos], [BI.records, 'records folder', BI.names.records]];
+  for(const [h, what, nm] of tops){
+    if(!(await biPermit(h))){ toast('History Scout needs permission for the ' + what + ' — press the button again and allow it', 4200); return null; }
+    if(!(await biReachable(h))){
       openSheet('<h2>That folder isn’t there</h2>' +
-        '<p class="hint">The ' + what + ' (<b>' + esc(BI.names[k] || '') + '</b>) cannot be reached. If it is on your D: drive, check the drive is plugged in and try again.</p>' +
+        '<p class="hint">The ' + what + ' (<b>' + esc(nm || '') + '</b>) cannot be reached. If it is on a drive that unplugs, check the drive is connected and try again.</p>' +
         '<p class="hint"><b>Nothing was written.</b></p><button class="btn pri full" id="biNo">OK</button>');
       $('#biNo').onclick = closeSheet;
-      return false;
+      return null;
     }
   }
-  return true;
+  try{ return await biRoots(); }catch(err){ toast('Could not open the folders: ' + err.message, 3600); return null; }
 }
 
 /* A file is only ever created when nothing of that name is there. */
@@ -3047,8 +3091,8 @@ async function biWrite(dir, name, blob){
   await w.close();
 }
 const biSub = (dir, name) => dir.getDirectoryHandle(name, { create: true });
-/* "Old Salem Church 01.jpg" — or the next free number, if that name is taken by a photo that was
-   filed earlier (deleting a photo shifts the numbering, and the file already there must not be touched). */
+/* "Old Salem Church 01.jpg" — or the next free number, if that name is taken by a photo filed
+   earlier (deleting a photo shifts the numbering, and the file already there must not be touched). */
 async function biFreeName(dir, site, i, ext){
   for(let n = i + 1; n <= i + 200; n++){
     const name = site + ' ' + String(n).padStart(2, '0') + '.' + ext;
@@ -3061,11 +3105,23 @@ async function biFreeFile(dir, base, ext){
   for(let n = 2; n < 100; n++){ const name = base + ' (' + n + ').' + ext; if(!(await biHas(dir, name))) return name; }
   return base + ' ' + Date.now() + '.' + ext;
 }
+/* Is the file this photo was filed as still in THIS folder? Changing folders makes it false, which is
+   how "Bring in everything again" knows what to fill a new folder with. */
+async function biFiled(root, path){
+  if(!path || path === 'downloaded') return false;
+  const parts = String(path).split('\\');
+  try{
+    let d = root;
+    for(let i = 0; i < parts.length - 1; i++) d = await d.getDirectoryHandle(parts[i]);
+    await d.getFileHandle(parts[parts.length - 1]);
+    return true;
+  }catch(err){ return false; }
+}
 
 /* When the RECORD itself last changed — its name, category, position or any form field. Photos being
    added move the site’s own timestamp too, and that must not put it on the “changed” list: nothing in the
    CSV a person has to retype has changed. The per-field times BUILD 11 keeps answer this exactly. */
-const recUpdated = st => Math.max(0, ...Object.values(st._t || {}).filter(v => typeof v === 'number'));
+const recUpdated = st => Math.max(0, ...Object.values(st._t || {}).filter(v => typeof v === "number"));
 
 /* What is waiting to be brought in, for the card. */
 function biPending(){
@@ -3079,13 +3135,30 @@ function biPending(){
   return { photos: photos, waiting: waiting, fresh: fresh, changed: changed };
 }
 
-async function bringInNew(btn){
+/* The photos list ArcGIS matches on: its tools pair a record with a file by NAME, so the file name is
+   the column that matters. The path inside your folder is there for you; the full path only if you
+   typed where the folder actually is, because a web page is never told. */
+function csvFiled(rows){
+  const head = ['site_id', 'NAMEFEATURE', 'Category', 'photo_id', 'file_name', 'path_in_folder', 'full_path',
+                'taken_iso', 'latitude', 'longitude', 'facing_deg', 'width', 'height', 'bytes', 'full_size'];
+  const body = rows.map(r => {
+    const p = r.photo, o = origFile(p) || {};
+    const full = BI.path ? BI.path.replace(/[\\/]+$/, '') + '\\' + r.pathInFolder : '';
+    return [r.site.id, r.site.name, catById(r.site.category).name, p.id, r.name, r.pathInFolder, full,
+      new Date(p.takenAt).toISOString(), p.lat ?? '', p.lon ?? '', p.heading != null ? p.heading.toFixed(0) : '',
+      p.w, p.h, p.size, o.fullSize === true ? 'yes' : o.fullSize === false ? 'no' : 'unknown'];
+  });
+  return toCSV([head, ...body]);
+}
+
+async function bringInNew(btn, opts){
+  opts = opts || {};
   if(BI.running) return;
-  if(!(await biReady())) return;
+  const roots = await biReady(); if(!roots) return;
   BI.running = true; BI.problems = []; BI.result = '';
   const old = btn ? btn.textContent : '';
   const stamp = new Date().toISOString().slice(0, 10);
-  let filed = 0, already = 0, waiting = 0, newRows = [], changedRows = [], wrote = [];
+  let filed = 0, already = 0, waiting = 0, newRows = [], changedRows = [], filedRows = [], wrote = [];
   try{
     const paths = sitePaths();
     for(const st of [...S.sites].sort((a, b) => a.created - b.created)){
@@ -3093,7 +3166,9 @@ async function bringInNew(btn){
       let dir = null;
       for(let i = 0; i < ph.length; i++){
         const p = ph[i];
-        if(p.broughtIn){ already++; continue; }
+        /* Normally a photo filed before is left alone. "Bring in everything again" only refiles the
+           ones whose file is not in THIS folder — so it fills a new folder without ever duplicating. */
+        if(p.broughtIn && (!opts.all || await biFiled(roots.photos, p.broughtIn.path))){ already++; continue; }
         const o = origFile(p);
         let blob = o && o.blob;
         if(!blob && p.up && p.up.done){
@@ -3101,11 +3176,13 @@ async function bringInNew(btn){
           try{ blob = await fetchOriginal(p); }catch(err){ blob = null; BI.problems.push('Could not fetch a photo of ' + st.name + ' from your account: ' + (err.message || err.code)); }
         }
         if(!blob){ waiting++; continue; }                    // still on the phone, not sent yet
-        if(!dir) dir = await biSub(await biSub(BI.photos, sp.cat), sp.site);
+        if(!dir) dir = await biSub(await biSub(roots.photos, sp.cat), sp.site);
         const name = await biFreeName(dir, sp.site, i, fileExt(o));
         await biWrite(dir, name, blob);
-        p.broughtIn = { at: now(), path: sp.cat + '\\' + sp.site + '\\' + name };
+        const rel = sp.cat + '\\' + sp.site + '\\' + name;
+        p.broughtIn = { at: now(), path: rel };
         await dbPut('photos', p);                            // stays on this computer; never goes online
+        filedRows.push({ site: st, photo: p, name: name, pathInFolder: roots.inside + rel });
         filed++;
         if(btn) btn.textContent = '⏳ ' + filed + ' photo' + (filed === 1 ? '' : 's') + ' filed…';
       }
@@ -3113,17 +3190,44 @@ async function bringInNew(btn){
       else if(recUpdated(st) > (st.broughtIn.listed || 0)) changedRows.push(st);
     }
     if(btn) btn.textContent = '⏳ writing the lists…';
+    const recs = roots.records;
+    /* Filling a fresh folder: it needs a list of everything in it, not only what happens to be new —
+       the sites were listed into the folder that was used before. */
+    if(opts.all && S.sites.length && (filed > 0 || !(await biHas(recs, 'all-sites ' + stamp + '.csv')))){
+      const nm = await biFreeFile(recs, 'all-sites ' + stamp, 'csv');
+      await biWrite(recs, nm, new Blob([csvSites([...S.sites])], { type: 'text/csv' }));
+      wrote.push(nm + ' — every site you have, for a folder starting from scratch');
+      if(S.sites.some(x => x.lat != null)){
+        const gj = await biFreeFile(recs, 'all-sites ' + stamp, 'geojson');
+        await biWrite(recs, gj, new Blob([geojson([...S.sites])], { type: 'application/geo+json' }));
+        wrote.push(gj + ' — the same sites with their positions built in');
+      }
+      for(const st of S.sites){ st.broughtIn = { at: now(), listed: recUpdated(st) }; await dbPut('sites', st); }
+      newRows = []; changedRows = [];
+    }
     if(newRows.length){
-      const nm = await biFreeFile(BI.records, 'new-sites ' + stamp, 'csv');
-      await biWrite(BI.records, nm, new Blob([csvSites(newRows)], { type: 'text/csv' }));
+      const nm = await biFreeFile(recs, 'new-sites ' + stamp, 'csv');
+      await biWrite(recs, nm, new Blob([csvSites(newRows)], { type: 'text/csv' }));
       wrote.push(nm + ' — ' + newRows.length + ' site' + (newRows.length === 1 ? '' : 's') + ' to import');
+      /* Only worth writing when there is a position in it: a GeoJSON of sites with no coordinates is an
+         empty file that looks like a mistake. */
+      if(newRows.some(x => x.lat != null)){
+        const gj = await biFreeFile(recs, 'new-sites ' + stamp, 'geojson');
+        await biWrite(recs, gj, new Blob([geojson(newRows)], { type: 'application/geo+json' }));
+        wrote.push(gj + ' — the same sites with their positions built in, for QGIS or ArcGIS');
+      }
       for(const st of newRows){ st.broughtIn = { at: now(), listed: recUpdated(st) }; await dbPut('sites', st); }
     }
     if(changedRows.length){
-      const nm = await biFreeFile(BI.records, 'changed-sites ' + stamp, 'csv');
-      await biWrite(BI.records, nm, new Blob([csvSites(changedRows)], { type: 'text/csv' }));
+      const nm = await biFreeFile(recs, 'changed-sites ' + stamp, 'csv');
+      await biWrite(recs, nm, new Blob([csvSites(changedRows)], { type: 'text/csv' }));
       wrote.push(nm + ' — ' + changedRows.length + ' site' + (changedRows.length === 1 ? '' : 's') + ' you edited since, to update by hand');
       for(const st of changedRows){ st.broughtIn.listed = recUpdated(st); await dbPut('sites', st); }
+    }
+    if(filedRows.length){
+      const nm = await biFreeFile(recs, 'photos ' + stamp, 'csv');
+      await biWrite(recs, nm, new Blob([csvFiled(filedRows)], { type: 'text/csv' }));
+      wrote.push(nm + ' — every photo filed, with the file names ArcGIS matches on when attaching');
     }
   }catch(err){
     console.error(err);
@@ -3132,16 +3236,17 @@ async function bringInNew(btn){
     BI.running = false;
     if(btn) btn.textContent = old;
   }
-  biReport({ filed: filed, already: already, waiting: waiting, wrote: wrote, sites: newRows.length, changed: changedRows.length });
+  biReport({ filed: filed, already: already, waiting: waiting, wrote: wrote, sites: newRows.length,
+             changed: changedRows.length, photosName: roots.photosName, recordsName: roots.recordsName });
   paintPC();
 }
 
 function biReport(r){
   const li = [];
-  li.push('<li><b>' + r.filed + '</b> photo' + (r.filed === 1 ? '' : 's') + ' filed into <b>' + esc(BI.names.photos || 'your photo folder') + '</b>.</li>');
-  if(r.wrote.length) for(const w of r.wrote) li.push('<li>Wrote <b>' + esc(w) + '</b> into <b>' + esc(BI.names.records || 'your records folder') + '</b>.</li>');
-  else li.push('<li>No new or changed sites to list, so no CSV was written.</li>');
-  if(r.already) li.push('<li>' + r.already + ' photo' + (r.already === 1 ? ' was' : 's were') + ' already brought in before, and left alone.</li>');
+  li.push('<li><b>' + r.filed + '</b> photo' + (r.filed === 1 ? '' : 's') + ' filed into <b>' + esc(r.photosName || 'your photo folder') + '</b>.</li>');
+  if(r.wrote.length) for(const w of r.wrote) li.push('<li>Wrote <b>' + esc(w) + '</b> into <b>' + esc(r.recordsName || 'your records folder') + '</b>.</li>');
+  else li.push('<li>No new or changed sites to list, so no list was written.</li>');
+  if(r.already) li.push('<li>' + r.already + ' photo' + (r.already === 1 ? ' was' : 's were') + ' already there, and left alone.</li>');
   if(r.waiting) li.push('<li>' + r.waiting + ' photo' + (r.waiting === 1 ? ' is' : 's are') + ' still only on the phone — press <b>Send</b> there, then bring in again.</li>');
   for(const p of BI.problems) li.push('<li class="warn">' + esc(p) + '</li>');
   BI.result = r.filed + ' photo' + (r.filed === 1 ? '' : 's') + ' filed' + (r.sites ? ', ' + r.sites + ' new site' + (r.sites === 1 ? '' : 's') + ' listed' : '') + (r.changed ? ', ' + r.changed + ' changed' : '');
@@ -3171,26 +3276,63 @@ function paintPC(){
   const box = $('#pcBody'); if(!box) return;
   const p = biPending();
   const waitingLine = p.waiting ? '<p class="hint" style="margin:8px 0 0">' + p.waiting + ' photo' + (p.waiting === 1 ? ' is' : 's are') + ' still only on the phone. Press <b>Send</b> there first.</p>' : '';
+  const on = (id, fn) => { const el = $('#' + id); if(el) el.onclick = fn; };
+
   if(!canFolders()){
-    box.innerHTML = '<p class="hint" style="margin:0 0 11px">On a computer, in Edge or Chrome, History Scout files your photos straight into folders on your drive. This browser can’t write into folders, so it downloads one ZIP per site instead.</p>' +
+    box.innerHTML = '<p class="hint" style="margin:0 0 11px">On a computer, in Edge or Chrome, History Scout files your photos straight into folders of your own. This browser can’t write into folders, so it downloads one ZIP per site instead.</p>' +
       '<button class="btn full" id="pcDown">⬇ Download ' + (p.fresh || 'new') + ' site' + (p.fresh === 1 ? '' : 's') + '</button>' + waitingLine;
-    $('#pcDown').onclick = () => biDownloadNew($('#pcDown'));
+    on('pcDown', () => biDownloadNew($('#pcDown')));
     return;
   }
-  const line = (k, what, hint) => '<div class="folder"><span>' + what + '</span>' +
-    (BI[k] ? '<b>' + esc(BI.names[k] || '') + '</b>' : '<span class="none">not chosen — ' + hint + '</span>') + '</div>';
-  box.innerHTML =
-    line('photos', 'Photos go to', 'pick D:\\History Scout') +
-    line('records', 'Records go to', 'pick C:\\GIS_Projects\\History Scout') +
-    '<div class="btnrow" style="margin:10px 0 0"><button class="btn" id="pcF1">📁 Photo folder</button><button class="btn" id="pcF2">📁 Records folder</button></div>' +
-    '<button class="btn pri full" id="pcGo" style="margin-top:9px">📥 Bring in new' +
-      (p.photos || p.fresh || p.changed ? ' — ' + [p.photos ? p.photos + ' photo' + (p.photos === 1 ? '' : 's') : '', p.fresh ? p.fresh + ' new site' + (p.fresh === 1 ? '' : 's') : '', p.changed ? p.changed + ' changed' : ''].filter(Boolean).join(', ') : '') + '</button>' +
-    '<p class="hint" style="margin:10px 0 0">Photos land in <b>Category › Site</b> folders; the ArcGIS lists go beside your GIS. Nothing already there is ever replaced, and only what hasn’t been brought in before is written.</p>' +
+
+  /* Nothing chosen yet — one question, one button. */
+  if(!biSet()){
+    box.innerHTML = BI.advanced
+      ? '<p class="hint" style="margin:0 0 11px"><b>Two folders.</b> One for photos — an external drive suits them — and one for the records, wherever your GIS work lives.</p>' +
+        '<div class="folder"><span>Photos go to</span><span class="none">not chosen</span></div>' +
+        '<div class="folder"><span>Records go to</span><span class="none">not chosen</span></div>' +
+        '<div class="btnrow"><button class="btn" id="pcF1">📁 Photo folder</button><button class="btn" id="pcF2">📁 Records folder</button></div>' +
+        '<button class="linkbtn" id="pcSimple" style="margin-top:10px">Use one folder instead</button>'
+      : '<p style="margin:0 0 4px;font-size:17px;font-weight:650">Where should History Scout keep your files on this computer?</p>' +
+        '<p class="hint" style="margin:0 0 11px">Pick any folder — on this PC or a drive you plug in. In the window that opens you can make a new one; most people call it <b>History Scout</b>. Your photos go in a <b>Photos</b> folder inside it, and the lists for ArcGIS, QGIS or Excel go in <b>Records</b>.</p>' +
+        '<button class="btn pri full" id="pcOne">📁 Choose a folder</button>' +
+        '<button class="linkbtn" id="pcAdv" style="margin-top:10px">Or keep photos and records in two different places</button>';
+    on('pcOne', biPickOne); on('pcF1', () => biPick('photos')); on('pcF2', () => biPick('records'));
+    on('pcAdv', () => { BI.advanced = true; paintPC(); });
+    on('pcSimple', () => { BI.advanced = false; paintPC(); });
+    return;
+  }
+
+  /* Set up — say plainly where things go, then the one button that does the work. */
+  const where = BI.mode === 'one'
+    ? '<div class="folder"><span>Photos go to</span><b>' + esc(BI.names.one || '') + '\\Photos</b></div>' +
+      '<div class="folder"><span>Records go to</span><b>' + esc(BI.names.one || '') + '\\Records</b></div>'
+    : '<div class="folder"><span>Photos go to</span><b>' + esc(BI.names.photos || '') + '</b></div>' +
+      '<div class="folder"><span>Records go to</span><b>' + esc(BI.names.records || '') + '</b></div>';
+  const waiting = [p.photos ? p.photos + ' photo' + (p.photos === 1 ? '' : 's') : '', p.fresh ? p.fresh + ' new site' + (p.fresh === 1 ? '' : 's') : '', p.changed ? p.changed + ' changed' : ''].filter(Boolean).join(', ');
+  box.innerHTML = where +
+    '<button class="btn pri full" id="pcGo" style="margin-top:10px">📥 Bring in new' + (waiting ? ' — ' + waiting : '') + '</button>' +
+    '<p class="hint" style="margin:10px 0 0">Photos land in <b>Category › Site</b> folders. Nothing already there is ever replaced, and only what hasn’t been brought in before is written.</p>' +
     waitingLine +
-    (BI.result ? '<p class="formmsg good" style="margin:10px 0 0">Last run: ' + esc(BI.result) + '</p>' : '');
-  $('#pcF1').onclick = () => biPick('photos');
-  $('#pcF2').onclick = () => biPick('records');
-  $('#pcGo').onclick = () => bringInNew($('#pcGo'));
+    (BI.result ? '<p class="formmsg good" style="margin:10px 0 0">Last run: ' + esc(BI.result) + '</p>' : '') +
+    '<details class="more"><summary>Change where things go</summary>' +
+      (BI.mode === 'one'
+        ? '<button class="btn full" id="pcOne">📁 Choose a different folder</button>' +
+          '<button class="btn full" id="pcTwo" style="margin-top:8px">Use two folders instead</button>'
+        : '<div class="btnrow"><button class="btn" id="pcF1">📁 Photo folder</button><button class="btn" id="pcF2">📁 Records folder</button></div>' +
+          '<button class="btn full" id="pcOne" style="margin-top:8px">Use one folder instead</button>') +
+      '<button class="btn full" id="pcAll" style="margin-top:8px">📥 Bring in everything again</button>' +
+      '<p class="hint" style="margin:8px 0 0">Use that after changing folders: it fills the new folder from the start. It still never replaces a file already there.</p>' +
+      '<label class="f" style="margin:12px 0 0"><span>Full path of your folder (optional)</span>' +
+        '<input type="text" id="pcPath" placeholder="D:\\History Scout" value="' + esc(BI.path || '') + '"></label>' +
+      '<p class="hint" style="margin:-4px 0 0">Windows tells a web page the folder, never its address. Type it once and the photos list can carry full paths, which some ArcGIS tools prefer.</p>' +
+    '</details>';
+  on('pcGo', () => bringInNew($('#pcGo')));
+  on('pcAll', () => bringInNew($('#pcAll'), { all: true }));
+  on('pcOne', biPickOne); on('pcF1', () => biPick('photos')); on('pcF2', () => biPick('records'));
+  on('pcTwo', () => { BI.mode = 'split'; BI.advanced = true; biSave(); paintPC(); });
+  const box2 = $('#pcPath');
+  if(box2) box2.onchange = async () => { BI.path = box2.value.trim(); await biSave(); toast(BI.path ? 'Saved' : 'Cleared'); };
 }
 
 /* ======================================================================
