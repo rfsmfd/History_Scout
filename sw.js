@@ -5,7 +5,7 @@
      - libraries + map tiles: CACHE FIRST
        => tiles you've already looked at keep working with no signal
    Bump BUILD to match index.html when you ship.  */
-const BUILD = 16;
+const BUILD = 17;
 const APP   = 'hs-app-v' + BUILD;
 const LIB   = 'hs-lib-v1';
 const TILES = 'hs-tiles-v1';

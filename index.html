@@ -36,7 +36,7 @@ button{background:none;border:0;cursor:pointer}
   display:flex;align-items:center;gap:10px;
   background:var(--bg2);border-bottom:1px solid var(--line);
 }
-#topbar .logo{font-size:22px}
+#topbar svg.logo{width:27px;height:27px;flex:0 0 auto;border-radius:6px;display:block}
 #topbar h1{margin:0;font-size:19px;font-weight:650;letter-spacing:.2px;flex:1}
 .badge{
   font-size:14px;font-weight:700;letter-spacing:.5px;padding:3px 7px;border-radius:20px;
@@ -335,7 +335,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 
 <div id="shell">
   <div id="topbar">
-    <span class="logo">🏚</span>
+    <svg class="logo" viewBox="0 0 512 512" role="img" aria-label="History Scout"><rect width="512" height="512" fill="#1E2B45"/><circle cx="256" cy="256" r="178" fill="none" stroke="#C9A24A" stroke-width="7"/><polygon points="380.5,131.5 256,256 256,212" fill="#E6C77F"/><polygon points="380.5,131.5 256,256 300,256" fill="#A8822F"/><polygon points="380.5,380.5 256,256 300,256" fill="#E6C77F"/><polygon points="380.5,380.5 256,256 256,300" fill="#A8822F"/><polygon points="131.5,380.5 256,256 256,300" fill="#E6C77F"/><polygon points="131.5,380.5 256,256 212,256" fill="#A8822F"/><polygon points="131.5,131.5 256,256 212,256" fill="#E6C77F"/><polygon points="131.5,131.5 256,256 256,212" fill="#A8822F"/><polygon points="256,22 256,256 215,215" fill="#C4463A"/><polygon points="256,22 256,256 297,215" fill="#8E2A26"/><polygon points="490,256 256,256 297,215" fill="#E6C77F"/><polygon points="490,256 256,256 297,297" fill="#A8822F"/><polygon points="256,490 256,256 297,297" fill="#E6C77F"/><polygon points="256,490 256,256 215,297" fill="#A8822F"/><polygon points="22,256 256,256 215,297" fill="#E6C77F"/><polygon points="22,256 256,256 215,215" fill="#A8822F"/><circle cx="256" cy="256" r="112" fill="#1E2B45" stroke="#F1E6CC" stroke-width="9"/><rect x="190" y="186" width="34" height="140" fill="#F1E6CC"/><rect x="288" y="186" width="34" height="140" fill="#F1E6CC"/><rect x="224" y="242" width="64" height="26" fill="#F1E6CC"/><rect x="178" y="180" width="58" height="16" fill="#F1E6CC"/><rect x="178" y="316" width="58" height="16" fill="#F1E6CC"/><rect x="276" y="180" width="58" height="16" fill="#F1E6CC"/><rect x="276" y="316" width="58" height="16" fill="#F1E6CC"/></svg>
     <h1>History Scout</h1>
     <span class="badge" id="buildBadge">BUILD 1</span>
   </div>
@@ -593,7 +593,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 16;
+const BUILD = 17;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
