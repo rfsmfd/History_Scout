@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E9DFC6">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  .backbar{position:sticky;top:0;z-index:5;background:rgba(244,236,217,.94);border-bottom:1px solid #C0B08C;
+    backdrop-filter:blur(6px);padding:10px 16px;font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .backbar a{color:#8A5312;text-decoration:none;font-weight:700}
+  @media (prefers-color-scheme:dark){ .backbar{background:rgba(28,23,19,.94);border-bottom-color:#463B31} .backbar a{color:#D9A254} }
+</style>
+</head>
+<body>
+<div class="backbar"><a href="./">&larr; History Scout</a></div>
+<title>History Scout Field Card</title>
+<style>
+:root{
+  --bg:#E6E2D8; --surface:#F2EFE8; --sunk:#DCD7CB;
+  --ink:#2A241E; --ink-soft:#6B6055; --ink-faint:#8C8175;
+  --rule:#C9C1B3; --rule-soft:#D8D2C6;
+  --brass:#8F6216; --brass-soft:#B98A33;
+  --verdigris:#3B6857;
+  --alarm:#9A3B2E;
+  --shadow:0 1px 2px rgba(42,36,30,.07);
+  --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1C1713; --surface:#272019; --sunk:#171310;
+    --ink:#F0E8DC; --ink-soft:#A89A8A; --ink-faint:#8A7B6C;
+    --rule:#463B31; --rule-soft:#352C24;
+    --brass:#D9A254; --brass-soft:#B7873F;
+    --verdigris:#77AE93;
+    --alarm:#D2705F;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1C1713; --surface:#272019; --sunk:#171310;
+  --ink:#F0E8DC; --ink-soft:#A89A8A; --ink-faint:#8A7B6C;
+  --rule:#463B31; --rule-soft:#352C24;
+  --brass:#D9A254; --brass-soft:#B7873F;
+  --verdigris:#77AE93;
+  --alarm:#D2705F;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.55; -webkit-text-size-adjust:100%}
+.wrap{max-width:35rem; margin:0 auto; padding:2rem 1.15rem 4rem; display:flex; flex-direction:column; gap:2.25rem}
+header{display:flex; flex-direction:column; gap:.9rem}
+.eyebrow{font-family:var(--mono); font-size:.68rem; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-faint); display:flex; align-items:center; gap:.6rem}
+.eyebrow::after{content:""; flex:1; height:1px; background:var(--rule)}
+h1{font-family:var(--serif); font-weight:600; font-size:2.1rem; line-height:1.1; margin:0; letter-spacing:-.015em; text-wrap:balance}
+.standfirst{margin:0; color:var(--ink-soft); font-size:1.02rem; max-width:30rem}
+.chips{display:flex; flex-wrap:wrap; gap:.45rem}
+.chip{font-family:var(--mono); font-size:.7rem; letter-spacing:.06em; padding:.3rem .55rem; border:1px solid var(--rule); border-radius:3px; color:var(--ink-soft); background:var(--surface)}
+.chip b{color:var(--brass); font-weight:600}
+.launch{display:flex; align-items:center; justify-content:space-between; gap:1rem; background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--brass); padding:.95rem 1.1rem; text-decoration:none; color:inherit; box-shadow:var(--shadow)}
+.launch:hover{background:var(--sunk)}
+.launch:focus-visible{outline:2px solid var(--brass); outline-offset:2px}
+.launch .lbl{font-family:var(--mono); font-size:.66rem; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint)}
+.launch .url{font-family:var(--mono); font-size:.86rem; color:var(--brass); word-break:break-all; margin-top:.15rem}
+.launch .go{font-size:1.3rem; color:var(--brass-soft); flex:0 0 auto}
+section{display:flex; flex-direction:column; gap:1rem}
+h2{font-family:var(--serif); font-size:1.32rem; font-weight:600; margin:0; padding-bottom:.5rem; border-bottom:1px solid var(--rule); letter-spacing:-.01em}
+h2 .n{font-family:var(--mono); font-size:.78rem; color:var(--brass); margin-right:.55rem; vertical-align:.12em}
+h2 .where{display:block; font-family:var(--mono); font-size:.64rem; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint); margin-top:.3rem}
+p{margin:0}
+.note{color:var(--ink-soft); font-size:.95rem}
+ol.steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column}
+ol.steps li{display:grid; grid-template-columns:1.9rem 1fr; gap:.85rem; padding:.95rem 0; border-bottom:1px solid var(--rule-soft)}
+ol.steps li:first-child{padding-top:0}
+ol.steps li:last-child{border-bottom:0; padding-bottom:0}
+ol.steps .num{font-family:var(--mono); font-size:.95rem; font-variant-numeric:tabular-nums; color:var(--brass); padding-top:.1rem}
+ol.steps .body strong{font-weight:600}
+ol.steps .body em{font-style:normal; color:var(--ink-soft); display:block; margin-top:.25rem; font-size:.93rem}
+.readout{border:1px solid var(--rule); background:var(--surface); box-shadow:var(--shadow)}
+.readout .row{display:grid; grid-template-columns:auto 1fr; gap:.5rem 1rem; align-items:baseline; padding:.8rem 1rem; border-bottom:1px solid var(--rule-soft)}
+.readout .row:last-child{border-bottom:0}
+.readout .val{font-family:var(--mono); font-size:.83rem; font-weight:600; white-space:nowrap}
+.readout .mean{font-size:.92rem; color:var(--ink-soft); grid-column:1/-1}
+@media (min-width:26rem){ .readout .mean{grid-column:2; margin-top:0} .readout .row{grid-template-columns:11.5rem 1fr} }
+.v-good{color:var(--verdigris)}
+.v-ok{color:var(--brass)}
+.v-bad{color:var(--alarm)}
+.callout{background:var(--sunk); border:1px solid var(--rule); padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.5rem}
+.callout .hd{font-family:var(--mono); font-size:.68rem; letter-spacing:.15em; text-transform:uppercase; color:var(--brass)}
+.callout.warn .hd{color:var(--alarm)}
+.callout p{font-size:.95rem}
+kbd{font-family:var(--mono); font-size:.86em; background:var(--surface); border:1px solid var(--rule); border-bottom-width:2px; border-radius:3px; padding:.08em .38em; white-space:nowrap}
+footer{border-top:1px solid var(--rule); padding-top:1.1rem; font-size:.85rem; color:var(--ink-faint); font-family:var(--mono); line-height:1.6}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Field Card</div>
+    <h1>History Scout Field Card</h1>
+    <p class="standfirst">The whole route on one page: from the photograph in the field to the record in ArcGIS. The Owner's Manual has the detail; this is what you carry.</p>
+    <div class="chips">
+      <span class="chip">BUILD <b>14</b></span>
+      <span class="chip">iPhone · home screen</span>
+      <span class="chip">PC · Edge or Chrome</span>
+    </div>
+    <a class="launch" href="https://rfsmfd.github.io/History_Scout/">
+      <span>
+        <span class="lbl">Open History Scout</span>
+        <span class="url">rfsmfd.github.io/History_Scout</span>
+      </span>
+      <span class="go" aria-hidden="true">→</span>
+    </a>
+  </header>
+
+  <section>
+    <h2><span class="n">01</span>Photograph it<span class="where">On the phone · in the field</span></h2>
+    <ol class="steps">
+      <li><span class="num">1</span><span class="body"><strong>Tap <kbd>📷 Capture Site</kbd> and take the photo.</strong><em>No signal needed. Position, accuracy, elevation, time and heading are recorded with it.</em></span></li>
+      <li><span class="num">2</span><span class="body"><strong>Tap one category tile, then <kbd>💾 Save Site</kbd>.</strong><em>Leave the name blank and it names itself. Rename the whole group later in one go.</em></span></li>
+      <li><span class="num">3</span><span class="body"><strong>Keep photographing.</strong><em>Anything within 300 yards joins the site you're on. The bar at the top always says where photos are landing — tap <kbd>＋ New</kbd> to start a fresh site.</em></span></li>
+      <li><span class="num">4</span><span class="body"><strong>Before walking off: <kbd>🔍 Check sharpness</kbd>.</strong><em>Opens the photo at full detail. If it's soft, <kbd>🗑 Delete and retake</kbd> — two taps, and the retake joins the same site.</em></span></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="n">02</span>The line under the bar<span class="where">On the phone · any time</span></h2>
+    <p class="note">One line, near the top of the Capture screen, tells you where your work actually is.</p>
+    <div class="readout">
+      <div class="row"><span class="val v-good">☁ Records backed up</span><span class="mean">Everything typed is in your account. Photos still need Send.</span></div>
+      <div class="row"><span class="val v-ok">⏳ 3 changes waiting</span><span class="mean">No signal. They go up by themselves when you have some. Nothing is lost.</span></div>
+      <div class="row"><span class="val v-ok">· 12 photos to Send</span><span class="mean">Photos are waiting for you to press Send at home, on Wi-Fi.</span></div>
+      <div class="row"><span class="val v-bad">⚠ Not backed up</span><span class="mean">You're working without an account. Sign in under <strong>More</strong> to change that.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">03</span>Send the photos<span class="where">On the phone · at home, on Wi-Fi</span></h2>
+    <ol class="steps">
+      <li><span class="num">1</span><span class="body"><strong>More → <kbd>📤 Send N photos</kbd>.</strong><em>Records went up on their own; photos are big, so they wait for you.</em></span></li>
+      <li><span class="num">2</span><span class="body"><strong>Leave History Scout open until it finishes.</strong><em>iPhones stop web apps sending in the background. Stop and resume any time — it picks up where it left off.</em></span></li>
+    </ol>
+    <div class="callout">
+      <span class="hd">Nothing leaves the phone</span>
+      <p>Send copies; it never removes. A photo counts as sent only when Google confirms it at exactly the right size.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">04</span>Write it up, then file it<span class="where">On the PC · Edge or Chrome</span></h2>
+    <ol class="steps">
+      <li><span class="num">1</span><span class="body"><strong>Open the same address and sign in.</strong><em>Once per computer. Your sites appear with the list on the left and the record on the right.</em></span></li>
+      <li><span class="num">2</span><span class="body"><strong>Fill in the form with a keyboard.</strong><em>Changes reach the phone in seconds. Only fields you touch are saved, so nothing of yours is overwritten.</em></span></li>
+      <li><span class="num">3</span><span class="body"><strong>More → Your computer → <kbd>📥 Bring in new</kbd>.</strong><em>Photos into <span style="font-family:var(--mono)">Photos\Category\Site\</span>, and the lists into <span style="font-family:var(--mono)">Records\</span>. It never overwrites a file and files only what's new.</em></span></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="n">05</span>Give it the photo you fixed<span class="where">On the PC · after Photoshop</span></h2>
+    <ol class="steps">
+      <li><span class="num">1</span><span class="body"><strong>Save the edit beside the original, named after it.</strong><em><span style="font-family:var(--mono)">Old Salem Church 01 edited.jpg</span> — a second pass is <span style="font-family:var(--mono)">… edited 2.jpg</span>.</em></span></li>
+      <li><span class="num">2</span><span class="body"><strong>More → Your computer → <kbd>✨ Check for edited photos</kbd>.</strong><em>It reads your folders and puts the edit into the record. Nothing on the drive is renamed, moved or replaced.</em></span></li>
+      <li><span class="num">3</span><span class="body"><strong>From then on the record shows your version.</strong><em>Thumbnails, stamps and exports use it; <kbd>🖼 Show original</kbd> in the viewer compares the two. Both are kept for good.</em></span></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="n">06</span>Into ArcGIS<span class="where">On the PC · when you're ready</span></h2>
+    <ol class="steps">
+      <li><span class="num">1</span><span class="body"><strong>Import <span style="font-family:var(--mono)">Records\new-sites &lt;date&gt;.csv</span>.</strong><em>Your 17 template columns lead it, spelled as your geodatabase spells them. Latitude and longitude are separate numbers, for XY Table To Point.</em></span></li>
+      <li><span class="num">2</span><span class="body"><strong>Attach the photos with <span style="font-family:var(--mono)">photos &lt;date&gt;.csv</span>.</strong><em>It names each file, which is what Generate Attachment Match Table pairs on.</em></span></li>
+      <li><span class="num">3</span><span class="body"><strong>Sites you edit afterwards appear on <span style="font-family:var(--mono)">changed-sites</span>.</strong><em>Update those by hand rather than importing duplicates. Adding a photo doesn't put a site on that list.</em></span></li>
+    </ol>
+  </section>
+
+  <div class="callout">
+    <span class="hd">If you delete something by mistake</span>
+    <p><strong>More → 🗑 Deleted items</strong> and tap Restore. Sites, their photos, anything — it comes back on every device. Nothing is ever erased.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="hd">Before you remove the home-screen icon</span>
+    <p>Removing it wipes that phone's copy of everything. Your records are safe in your account, but photos you haven't sent are not. <strong>Press Send first, every time.</strong></p>
+  </div>
+
+  <footer>
+    History Scout · BUILD 14 · rfsmfd/History_Scout<br>
+    Full detail: History Scout — Owner's Manual, in FAISON DIGITAL WORKS\HISTORY APP\Documents<br>
+    Record today. Preserve tomorrow.
+  </footer>
+
+</div>
+
+</body>
+</html>

@@ -5,7 +5,7 @@
      - libraries + map tiles: CACHE FIRST
        => tiles you've already looked at keep working with no signal
    Bump BUILD to match index.html when you ship.  */
-const BUILD = 14;
+const BUILD = 15;
 const APP   = 'hs-app-v' + BUILD;
 const LIB   = 'hs-lib-v1';
 const TILES = 'hs-tiles-v1';
@@ -50,11 +50,13 @@ self.addEventListener('activate', e => {
    home screen icon sat on 4 and no amount of reopening moved it. Reproduced here
    before fixing: fetch('./') returned the old build while fetch('./index.html')
    returned the new one. */
+const DOC_PAGES = /\/(manual|card)\.html$/;
 const isAppItself = (req, url) =>
-  req.mode === 'navigate' ||
+  (!(url.origin === location.origin && DOC_PAGES.test(url.pathname))) &&
+  (req.mode === 'navigate' ||
   req.destination === 'document' ||
   (url.origin === location.origin &&
-    (url.pathname.endsWith('.html') || url.pathname.endsWith('/')));
+    (url.pathname.endsWith('.html') || url.pathname.endsWith('/'))));
 
 self.addEventListener('fetch', e => {
   const req = e.request;

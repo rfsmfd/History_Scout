@@ -482,6 +482,15 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       </div>
 
       <div class="card">
+        <h3>How to use it</h3>
+        <p class="hint" style="margin:0 0 11px">Both open in this browser and are saved for use with no signal, like the app.</p>
+        <div class="btnrow">
+          <button class="btn" id="btnHelpManual">📖 Owner’s Manual</button>
+          <button class="btn" id="btnHelpCard">🧭 Field Card</button>
+        </div>
+      </div>
+
+      <div class="card">
         <h3>Version</h3>
         <div class="kv"><span class="k">This copy</span><span class="v" id="vLocal">—</span></div>
         <div class="kv"><span class="k">On the server</span><span class="v" id="vServer">not checked yet</span></div>
@@ -570,7 +579,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 14;
+const BUILD = 15;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -2122,6 +2131,8 @@ $$('#v-more .tg[data-set]').forEach(t => t.onclick = () => {
 });
 $('#setRecorder').onchange = e => { S.settings.recordedBy = e.target.value.trim(); saveSettings(); toast('Saved'); };
 $('#setRadius').onchange   = e => { S.settings.groupRadius = +e.target.value; saveSettings(); toast('Saved'); };
+$('#btnHelpManual').onclick = () => window.open('manual.html', '_blank');
+$('#btnHelpCard').onclick   = () => window.open('card.html', '_blank');
 $('#btnCheckUpd').onclick  = checkNow;
 $('#btnReinstall').onclick = reinstallApp;
 

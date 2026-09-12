@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E9DFC6">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  .backbar{position:sticky;top:0;z-index:5;background:rgba(244,236,217,.94);border-bottom:1px solid #C0B08C;
+    backdrop-filter:blur(6px);padding:10px 16px;font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .backbar a{color:#8A5312;text-decoration:none;font-weight:700}
+  @media (prefers-color-scheme:dark){ .backbar{background:rgba(28,23,19,.94);border-bottom-color:#463B31} .backbar a{color:#D9A254} }
+</style>
+</head>
+<body>
+<div class="backbar"><a href="./">&larr; History Scout</a></div>
+<title>History Scout Owner's Manual</title>
+<style>
+  :root{
+    --bg:#F4ECD9; --card:#FBF5E6; --line:#C0B08C; --ink:#211B11; --ink2:#463B29; --ink3:#5A4D34;
+    --accent:#8A5312; --accent2:#A9701F; --head:#1E2B45; --red:#8E2A26;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    --bg:#191510; --card:#221C15; --line:#4A4034; --ink:#F2E8D6; --ink2:#D8CBB4; --ink3:#B6A98F;
+    --accent:#D79A45; --accent2:#E6C77F; --head:#CBD8F0; --red:#E0857F;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#191510; --card:#221C15; --line:#4A4034; --ink:#F2E8D6; --ink2:#D8CBB4; --ink3:#B6A98F;
+    --accent:#D79A45; --accent2:#E6C77F; --head:#CBD8F0; --red:#E0857F;
+  }
+  body{background:var(--bg);color:var(--ink);margin:0;
+    font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:26px 18px 70px}
+  h1.title{font:700 30px/1.2 Georgia,"Times New Roman",serif;color:var(--head);margin:0 0 6px;text-wrap:balance}
+  h1.title + p{font-size:19px;color:var(--accent);font-weight:650;margin:0 0 4px}
+  h2{font:700 21px/1.3 Georgia,"Times New Roman",serif;color:var(--accent);margin:34px 0 10px;
+    padding-top:14px;border-top:1px solid var(--line);text-wrap:balance;scroll-margin-top:12px}
+  h3{font:700 17px/1.35 -apple-system,"Segoe UI",sans-serif;color:var(--ink);margin:22px 0 6px;letter-spacing:.2px}
+  p{margin:0 0 12px}
+  ul,ol{margin:0 0 14px;padding-left:22px}
+  li{margin:5px 0}
+  a{color:var(--accent);text-underline-offset:2px}
+  code{font:14px ui-monospace,Consolas,monospace;background:var(--card);border:1px solid var(--line);
+    border-radius:5px;padding:1px 5px;word-break:break-word}
+  pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;overflow-x:auto}
+  pre code{border:0;padding:0;background:none}
+  blockquote{margin:12px 0;padding:8px 14px;border-left:3px solid var(--accent2);color:var(--ink2);background:var(--card);border-radius:0 8px 8px 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  .tw{overflow-x:auto;margin:0 0 16px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+  table{border-collapse:collapse;width:100%;font-size:16px}
+  th,td{padding:9px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+  th{font-weight:700;color:var(--ink2);background:rgba(138,83,18,.08);white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+  nav.toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:22px 0 6px}
+  nav.toc b{display:block;font-size:14px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:26px}
+  nav.toc li{margin:3px 0;break-inside:avoid}
+  nav.toc a{text-decoration:none;font-weight:600}
+  @media (max-width:560px){ nav.toc ol{columns:1} h1.title{font-size:26px} }
+  footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--ink3);font-size:15px}
+</style>
+<div class="wrap">
+<h1 class="title">History Scout — Owner's Manual</h1>
+<p><b>Record today. Preserve tomorrow.</b></p>
+<nav class="toc"><b>What is in here</b><ol><li><a href="#what-history-scout-is">What History Scout is</a></li><li><a href="#1-getting-in">1 · Getting in</a></li><li><a href="#2-the-capture-screen-recording-in-the-field">2 · The Capture screen — recording in the field</a></li><li><a href="#3-the-compass">3 · The compass</a></li><li><a href="#4-your-sites">4 · Your sites</a></li><li><a href="#5-the-photo-viewer">5 · The photo viewer</a></li><li><a href="#6-the-map">6 · The map</a></li><li><a href="#7-more-your-account">7 · More — your account</a></li><li><a href="#8-more-your-computer">8 · More — your computer</a></li><li><a href="#9-more-exports-settings-and-the-rest">9 · More — exports, settings and the rest</a></li><li><a href="#10-a-full-trip-end-to-end">10 · A full trip, end to end</a></li><li><a href="#11-where-everything-lives-and-what-it-costs">11 · Where everything lives, and what it costs</a></li><li><a href="#12-what-is-still-to-build">12 · What is still to build</a></li><li><a href="#13-if-something-looks-wrong">13 · If something looks wrong</a></li></ol></nav>
+<p>For BUILD 15, 12 September 2026 · <a href="https://rfsmfd.github.io/History_Scout/">https://rfsmfd.github.io/History_Scout/</a></p>
+<h2 id="what-history-scout-is">What History Scout is</h2>
+<p>A field notebook for old places. You photograph a homestead, church, school, cemetery, archaeological site or store; the app records where you stood, which way you faced, and when — then gets out of your way. The writing up happens later, at the kitchen table, on whichever device you have to hand.</p>
+<p>It works in two halves:</p>
+<div class="tw"><table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><b>The phone, in the field</b></td><td>One tap to photograph, one tap for the category, and you're walking again. No signal needed.</td></tr>
+<tr><td><b>The computer, at the desk</b></td><td>The same records on a big screen with a keyboard, photos filed into folders on your drive, and lists ready for ArcGIS.</td></tr>
+</tbody></table></div>
+<p>Everything you record is kept on the device you recorded it on <b>and</b>, once you sign in, in your own private online store. Nothing is shared with anyone.</p>
+<p><b>It is a web app.</b> There is nothing to install from a store: you open a web address, and on the phone you add it to the home screen so it behaves like any other app. Updates arrive by themselves; you tap a banner.</p>
+<hr>
+<h2 id="1-getting-in">1 · Getting in</h2>
+<h3>The sign-in page</h3>
+<p>The first time you open History Scout it shows your splash artwork with three choices. You see this once.</p>
+<div class="tw"><table><thead><tr><th>Choice</th><th>What it means</th></tr></thead><tbody>
+<tr><td><b>Sign in</b></td><td>You have an account. Your records back themselves up and appear on your other devices.</td></tr>
+<tr><td><b>Use without an account</b></td><td>Everything works, but stays on that device only, and is not backed up.</td></tr>
+<tr><td><b>Request access</b></td><td>You don't have an account yet and want one.</td></tr>
+</tbody></table></div>
+<p><b>To sign in</b></p>
+<ol>
+<li>Tap <b>Sign in</b>.</li>
+<li>Type your email and password.</li>
+<li>Tap the <b>Sign in</b> button underneath.</li>
+<li>You land on the Capture screen. Near the top it should say <b>☁ Records backed up</b>.</li>
+</ol>
+<p><b>If you forget your password</b></p>
+<ol>
+<li>Tap <b>Sign in</b>, type your email.</li>
+<li>Tap <b>Forgot password?</b></li>
+<li>Google emails you a link to set a new one. It may land in your Spam folder.</li>
+</ol>
+<p><b>To ask for an account</b> (this is what anyone else does)</p>
+<ol>
+<li>Tap <b>Request access</b>.</li>
+<li>Fill in your name, your email, a password you choose, and a line about what you record.</li>
+<li>Tap <b>Send request</b>. Two things then happen: you get an email to confirm your address — tap the link in it — and the owner approves you. Until then the app works normally and keeps everything on that device.</li>
+</ol>
+<h3>What the line on the Capture screen is telling you</h3>
+<div class="tw"><table><thead><tr><th>Line</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>☁ Records backed up</td><td>Everything you have typed is in your account.</td></tr>
+<tr><td>⏳ 3 changes waiting for signal</td><td>You are out of signal. They will go up by themselves when you are back.</td></tr>
+<tr><td>⚠ Not backed up — on this phone only</td><td>You chose to work without an account.</td></tr>
+<tr><td>✉ Confirm your email</td><td>Open the message History Scout sent you and tap its link.</td></tr>
+<tr><td>⏳ Waiting for approval</td><td>Your request is with the owner.</td></tr>
+<tr><td>· 12 photos to Send</td><td>Photos are waiting for you to press Send at home.</td></tr>
+</tbody></table></div>
+<hr>
+<h2 id="2-the-capture-screen-recording-in-the-field">2 · The Capture screen — recording in the field</h2>
+<p>This screen is built for gloves, sunlight and no signal. Everything else in the app can wait.</p>
+<h3>What is on it</h3>
+<ul>
+<li><b>Position</b> — your coordinates and how accurate they are. Green is good, amber is fair, red means no fix yet.</li>
+<li><b>Heading</b> — which way the phone is pointing. Tap it to open the compass.</li>
+<li><b>Local time</b> — what goes on the record.</li>
+<li><b>The bar</b> — says where the next photo will land: a site you're already working on, or a new one.</li>
+<li><b>Capture Site</b> — the camera.</li>
+<li><b>From Library</b> — a photo you already took.</li>
+<li><b>Your last photo</b> — shown large, so you can tell whether it is sharp.</li>
+<li><b>Today</b> — how many sites and photos so far, and the nearest site you have already recorded.</li>
+</ul>
+<h3>To record a site</h3>
+<ol>
+<li>Tap <b>📷 Capture Site</b> and take the photo.</li>
+<li>The app asks <b>What is it?</b> Tap one category tile.</li>
+<li>Type a name, or leave it blank and it names itself (<i>Church 1</i>, <i>Cemetery 2</i>…).</li>
+<li>Tap <b>💾 Save Site</b>.</li>
+</ol>
+<p>That is the whole field routine. Everything else can be filled in later.</p>
+<h3>To add more photos to the same site</h3>
+<p>Just keep photographing. Anything taken within 300 yards of the site you are working on joins it automatically — the bar at the top always says where they are going.</p>
+<ul>
+<li><b>To start a new site instead</b>, tap <b>＋ New</b>. The next photo begins a fresh record.</li>
+<li><b>To change how near counts as "the same place"</b>, see <i>Capture Settings</i> below.</li>
+</ul>
+<h3>Checking a photo before you walk away</h3>
+<ul>
+<li><b>🔍 Check sharpness</b> opens the photo already zoomed to full detail. Pinch or double-tap to move around.</li>
+<li><b>🗑 Delete and retake</b> takes two taps: the first arms it, the second deletes the photo and opens the camera again. The retake joins the same site.</li>
+</ul>
+<h3>The name of a site</h3>
+<ul>
+<li>Tap the bar at the top of the Capture screen to rename the site you are working on.</li>
+<li>The name belongs to the whole group — every photo already in it and every one you add.</li>
+</ul>
+<hr>
+<h2 id="3-the-compass">3 · The compass</h2>
+<p>Photo direction matters for documenting a building: "the north face" means something. History Scout records which way you were facing with every photo, and can burn it onto a stamped copy.</p>
+<ol>
+<li>On the Capture screen, tap the <b>Heading</b> tile.</li>
+<li>If it asks, tap <b>🧭 Enable Compass</b> — iPhones require one tap per app launch.</li>
+<li>The rose turns as you turn. The line underneath says which source it is using.</li>
+</ol>
+<p>If the magnetometer is slow or confused — near a tin roof, a vehicle, an iron fence — tap <b>✋ Set by hand</b> and drag the needle to the way you are facing. That is honestly as good as the sensor in those places. <b>🧭 Retry compass</b> hands control back to the sensor.</p>
+<hr>
+<h2 id="4-your-sites">4 · Your sites</h2>
+<p>Tap <b>🗂 Sites</b>. Every site you have recorded is here, newest first, with its category, its photo count, the date, and how far away it is from you now.</p>
+<ul>
+<li>The chips along the top filter by category.</li>
+<li>🔒 marks a sensitive site (see below).</li>
+<li>Tap any site to open its record.</li>
+</ul>
+<h3>The site record</h3>
+<p>The record has three parts: the top, your photos, and the form.</p>
+<p><b>The top</b></p>
+<ul>
+<li><b>Name of feature</b> and <b>Category</b> — change either at any time.</li>
+<li><b>🔒 Sensitive location</b> — turn this on for archaeological sites and graves that could be disturbed. Its position is then left off stamped copies, and exports mark it so you know to keep those files private.</li>
+</ul>
+<p><b>Photos</b></p>
+<ul>
+<li>Tap any photo to open it full screen.</li>
+<li><b>📷 Add photo</b> / <b>🖼 From library</b> add more.</li>
+<li>A ✨ on a photo means you have added an edited version; a ☁ means it is in your online store.</li>
+</ul>
+<p><b>Recorded position</b></p>
+<ul>
+<li>Latitude, longitude, accuracy, elevation, which way you were facing, and when it was first recorded.</li>
+<li><b>📍 Update to my position</b> replaces the position with where you are standing now.</li>
+<li><b>⧉ Copy coords</b> puts them on the clipboard.</li>
+</ul>
+<p><b>The form</b> — this is your <code>MASTER_Point_Template</code>, in your order, spelled the way your geodatabase spells it: Alternate name, Historic name, Feature type, Year, Source date, Description, Notes, Information, Source 1, Source 2, Evidence, Confidence, DHR number, GIS coords, Feature ID.</p>
+<ul>
+<li>Fields that carry over from your last record — Source 1, Source 2, Source date, County, Recorded by — are marked, so nothing arrives unannounced.</li>
+<li>Character counters warn you before a field is too long for ArcGIS, which would otherwise chop it silently.</li>
+<li><b>More detail</b> holds the extra survey fields (condition, materials, roof, chimneys, threats, cemetery details) for anyone who wants them. Cemetery fields appear only on cemeteries.</li>
+<li><b>💾 Save Changes</b> saves. Only fields you actually changed are touched, so an edit made on your other device meanwhile is not overwritten.</li>
+</ul>
+<p><b>The rest of the buttons</b></p>
+<ul>
+<li><b>📦 Export this site (ZIP)</b> — just this one site.</li>
+<li><b>🗺 Show on map</b> — jumps to it.</li>
+<li><b>🗑 Delete site</b> — moves it and its photos to <b>Deleted items</b>, where they can be restored on any device. Nothing is erased.</li>
+</ul>
+<hr>
+<h2 id="5-the-photo-viewer">5 · The photo viewer</h2>
+<p>Tap any photo to open it full screen.</p>
+<div class="tw"><table><thead><tr><th>Button</th><th>What it does</th></tr></thead><tbody>
+<tr><td><b>🏷 Show / 🚫 Hide overlay</b></td><td>The site name, position, date and a north arrow, drawn over the photo. It is never burned into your stored photo.</td></tr>
+<tr><td><b>🖼 Show original</b></td><td>Appears when you have added an edited version. Flips between the camera's file and your edit.</td></tr>
+<tr><td><b>ℹ️ Details</b></td><td>Everything recorded about that photo, and <b>✨ Add edited version</b>.</td></tr>
+<tr><td><b>↔ Move</b></td><td>Files the photo under a different site.</td></tr>
+<tr><td><b>🗑</b></td><td>Moves the photo to Deleted items.</td></tr>
+</tbody></table></div>
+<p><b>Zooming:</b> pinch to zoom, or double-tap to jump to full detail — one photo pixel per screen pixel — and double-tap again to come back. Past a certain point the app swaps in the full-size original, so you are judging real sharpness, not a preview.</p>
+<hr>
+<h2 id="6-the-map">6 · The map</h2>
+<p>Tap <b>🗺 Map</b>. Every site with a position is a pin, coloured and marked by category.</p>
+<ul>
+<li><b>Aerial</b>, <b>Topo</b> and <b>Street</b> switch the background.</li>
+<li><b>📍 Me</b> centres on you. <b>⤢ All</b> fits every site on screen.</li>
+<li>Tap a pin for a photo and the name; tap the name to open the record.</li>
+</ul>
+<p>Map backgrounds you have looked at are kept for use with no signal.</p>
+<hr>
+<h2 id="7-more-your-account">7 · More — your account</h2>
+<p><b>Your account</b> sits at the top of the <b>⚙️ More</b> tab. What it shows depends on where you stand.</p>
+<p><b>Signed in and approved</b></p>
+<ul>
+<li>Who you are signed in as.</li>
+<li><b>Records</b> — backed up, or how many changes are waiting for signal.</li>
+<li><b>Photos online</b> — how many of the photos on this device are in your online store.</li>
+</ul>
+<h3>Send — putting photos online</h3>
+<p>Records go up by themselves; they are tiny. Photos are large, so they go only when you say so.</p>
+<ol>
+<li>Get on Wi-Fi at home.</li>
+<li><b>More → 📤 Send N photos</b>.</li>
+<li><b>Leave History Scout open</b> until it finishes. iPhones stop web apps sending in the background.</li>
+</ol>
+<p>While it runs you see which photo it is on and how much has gone. <b>Stop</b> halts it; pressing Send again carries on from where it stopped.</p>
+<p>A photo counts as sent only when Google confirms the copy at exactly the right size. <b>Your photos stay on the phone as well</b> — Send never removes anything.</p>
+<h3>Deleted items</h3>
+<p>Nothing you delete is erased. <b>🗑 Deleted items</b> lists deleted sites and photos with the date they went.</p>
+<ol>
+<li><b>More → 🗑 Deleted items</b>.</li>
+<li>Tap <b>Restore</b> beside anything you want back.</li>
+</ol>
+<p>It returns on every device.</p>
+<h3>Access requests — owner only</h3>
+<p>When someone asks for access, you approve them here.</p>
+<ol>
+<li><b>More → 👥 Access requests</b>.</li>
+<li>Each request shows the person's name, email and what they record.</li>
+<li><b>Approve</b> puts their email on the approved list; <b>Decline</b> removes the request.</li>
+<li>The <b>Approved</b> list below shows who has access, and <b>Remove</b> takes it away again.</li>
+</ol>
+<p>Nobody can reach anything until you approve them — an account on its own opens nothing.</p>
+<h3>Signing out</h3>
+<p><b>More → Sign out.</b> Your records and photos stay on the device; they simply stop being backed up until you sign in again.</p>
+<hr>
+<h2 id="8-more-your-computer">8 · More — your computer</h2>
+<p>This card only does its full job in <b>Edge or Chrome on a computer</b>, because only those let a web page write into folders you choose. On a phone, or in Safari or Firefox, it offers a download per site instead.</p>
+<h3>Setting up, the first time</h3>
+<ol>
+<li>Open the app on the computer and sign in.</li>
+<li><b>More → Your computer → 📁 Choose a folder</b>.</li>
+<li>Pick a folder, or make one in that window — most people call it <i>History Scout</i>. Allow access when asked.</li>
+<li>History Scout creates <b>Photos</b> and <b>Records</b> inside it.</li>
+</ol>
+<p><b>Your own setup uses two folders instead:</b> photos on <code>D:\History Scout</code>, records in <code>C:\GIS_Projects\History Scout</code>. That choice lives under <b>Change where things go → Use two folders instead</b>, and once set you are never asked again.</p>
+<h3>Bring in new — filing everything on your drive</h3>
+<ol>
+<li>Make sure the drive is plugged in.</li>
+<li><b>More → Your computer → 📥 Bring in new</b>.</li>
+</ol>
+<p>It writes:</p>
+<div class="tw"><table><thead><tr><th>Where</th><th>What</th></tr></thead><tbody>
+<tr><td><code>Photos\Category\Site\</code></td><td><code>Old Salem Church 01.jpg</code>, <code>02</code>, … the originals, exactly as the camera wrote them</td></tr>
+<tr><td><code>Records\new-sites &lt;date&gt;.csv</code></td><td>Sites you have not brought in before. Your 17 template columns first, then latitude and longitude as numbers, then everything else</td></tr>
+<tr><td><code>Records\changed-sites &lt;date&gt;.csv</code></td><td>Sites you edited after bringing them in, to update by hand</td></tr>
+<tr><td><code>Records\photos &lt;date&gt;.csv</code></td><td>Every photo filed, with the file name ArcGIS attaches by</td></tr>
+<tr><td><code>Records\new-sites &lt;date&gt;.geojson</code></td><td>The same sites with their positions built in, for QGIS or ArcGIS</td></tr>
+</tbody></table></div>
+<p>Three rules it never breaks:</p>
+<ul>
+<li><b>It never overwrites a file.</b> A sky you fixed in Photoshop cannot be put back by a later run.</li>
+<li><b>Only what is new.</b> Each photo and site remembers it came in, on that computer.</li>
+<li><b>If the folder cannot be reached</b> — the drive unplugged — it says so and writes nothing at all.</li>
+</ul>
+<h3>Check for edited photos</h3>
+<ol>
+<li>In Photoshop, fix the photo and save it <b>beside the original</b>, named after it: <code>Old Salem Church 01 edited.jpg</code>. A second pass is <code>… edited 2.jpg</code>.</li>
+<li><b>More → Your computer → ✨ Check for edited photos</b>.</li>
+</ol>
+<p>It reads your site folders, finds files named after photos it filed, and adds them to those records. Your drive is only read — nothing is renamed, moved or replaced.</p>
+<p>From then on the record shows your edited version: thumbnails, the viewer, stamped copies and exports. The camera's original is kept beside it for good, and <b>🖼 Show original</b> in the viewer flips between them.</p>
+<p>On a phone, where there are no folders to search, use <b>Details → ✨ Add edited version</b> on the photo instead.</p>
+<h3>Under "Change where things go"</h3>
+<ul>
+<li><b>Choose a different folder</b> / <b>Use two folders instead</b> — change where things are written.</li>
+<li><b>📥 Bring in everything again</b> — after changing folders, this fills the new one from the start, writes an <code>all-sites</code> list, and still never replaces a file already there.</li>
+<li><b>Full path of your folder (optional)</b> — Windows tells a web page the folder, never its address. Type <code>D:\History Scout</code> once and the photos list carries full paths too, which some ArcGIS tools prefer.</li>
+</ul>
+<hr>
+<h2 id="9-more-exports-settings-and-the-rest">9 · More — exports, settings and the rest</h2>
+<h3>Export</h3>
+<p>Your insurance policy, and the way to get everything off a phone that has no account.</p>
+<div class="tw"><table><thead><tr><th>Button</th><th>What you get</th></tr></thead><tbody>
+<tr><td><b>📦 Export Everything (ZIP)</b></td><td>Photos laid out <code>Photos\Category\Site\</code>, optional stamped copies, and a <code>For ArcGIS</code> folder with sites.csv, photos.csv and sites.geojson, plus a README saying honestly what is inside</td></tr>
+<tr><td><b>📄 CSV only</b></td><td>One row per site</td></tr>
+<tr><td><b>🌐 GeoJSON</b></td><td>Sites with their positions built in</td></tr>
+</tbody></table></div>
+<p>A site's own record also has <b>📦 Export this site (ZIP)</b>.</p>
+<h3>Photo Overlay</h3>
+<ul>
+<li><b>Add stamped copies to exports</b> — a second copy of each photo with the site, position, date and heading burned in, in a folder of its own. Your originals always go out untouched. Sensitive sites say <i>Location withheld</i> instead of coordinates.</li>
+<li><b>Show overlay while viewing</b> — the same stamp, previewed in the viewer.</li>
+</ul>
+<h3>Capture Settings</h3>
+<ul>
+<li><b>Keep photos full size</b> — on by default. Saves each photo exactly as the camera took it, camera information included. Turn it off only to save space; photos are then reduced to 2,400 pixels and marked as such.</li>
+<li><b>Group nearby captures</b> — photos taken near the site you are working on join it automatically.</li>
+<li><b>How near is "the same place"</b> — 50 yards, 100 yards, 300 yards (the default) or a quarter mile.</li>
+<li><b>Recorded by</b> — your name, put on every new record.</li>
+</ul>
+<h3>Categories</h3>
+<p>Add your own category with a name and it appears as a tile on the <i>What is it?</i> screen and as a folder when photos are filed. Categories travel to your other devices. A category with no sites can be removed.</p>
+<h3>Storage</h3>
+<p>How many sites and photos are on this device, the space they take, and the space left.</p>
+<h3>Version</h3>
+<ul>
+<li><b>This copy</b> and <b>On the server</b> — the build numbers.</li>
+<li><b>↻ Check for updates now</b> — asks the server.</li>
+<li><b>🧹 Reinstall the app</b> — throws away the offline copy of the app and fetches a fresh one. <b>Your sites and photos are not touched.</b> Use it only if the app is stuck on an old build.</li>
+</ul>
+<p>When a new build is published, a banner appears at the top: tap it to update.</p>
+<h3>How to use it</h3>
+<p>Two buttons, <b>📖 Owner’s Manual</b> and <b>🧭 Field Card</b>, open this manual and the one-page quick card. They are</p>
+<p>pages on History Scout’s own website, so they need no signing in and are saved for reading with no signal.</p>
+<h3>Diagnostics</h3>
+<p>A plain list of what is working on this device: secure connection, installed to the home screen, GPS, compass permission, whether sensor readings are arriving, storage, the map and export libraries, the offline helper, your account, and whether you are online. Useful when something behaves oddly.</p>
+<hr>
+<h2 id="10-a-full-trip-end-to-end">10 · A full trip, end to end</h2>
+<ol>
+<li><b>In the field</b>: photograph, category tile, walk on. No signal needed.</li>
+<li><b>At home, on Wi-Fi</b>: open the app, <b>More → Send</b>, wait for it to finish.</li>
+<li><b>At the desk</b>: open the same web address on the PC. Your sites are there. Fill in the forms with a keyboard.</li>
+<li><b>Bring in new</b>: photos land in <code>Photos\Category\Site\</code>, the lists land in <code>Records</code>.</li>
+<li><b>Photoshop</b>: fix what needs fixing, save beside the original as <code>… edited.jpg</code>.</li>
+<li><b>Check for edited photos</b>: your edit goes into the record, the original kept.</li>
+<li><b>ArcGIS Pro</b>: import <code>new-sites &lt;date&gt;.csv</code> — it leads with your 17 template columns — then attach photos using the photos list, which names each file.</li>
+<li>Anything you change later on either device is on the other within seconds.</li>
+</ol>
+<hr>
+<h2 id="11-where-everything-lives-and-what-it-costs">11 · Where everything lives, and what it costs</h2>
+<div class="tw"><table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><b>On the phone</b></td><td>Every record and photo, in the app's own storage. Works with no signal.</td></tr>
+<tr><td><b>In your account</b></td><td>Records, and every photo you have sent. Private to you: only a signed-in, confirmed, approved email can read them.</td></tr>
+<tr><td><b>On your computer</b></td><td>Whatever Bring in new has filed, in ordinary folders you chose.</td></tr>
+</tbody></table></div>
+<p>Google's prices at your scale: records and sign-in are free; photo storage is about 2.6¢ per GB a month past the free 5 GB, and about 12¢ per GB to bring them down. A $5-a-month budget alert is set, which emails you rather than switching anything off.</p>
+<p><b>Sensitive sites</b> keep their coordinates out of stamped copies, and exports mark them so you know those files are not for sharing. Landowner names and contacts are in your records and exports — they never leave your account on their own.</p>
+<hr>
+<h2 id="12-what-is-still-to-build">12 · What is still to build</h2>
+<div class="tw"><table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><b>Photos from the Canon R7</b></td><td>Camera Connect sends them to the phone; History Scout would take them in, RAW included, and keep RAW beside the JPEG.</td></tr>
+<tr><td><b>Cemeteries and graves</b></td><td>A record per grave, with Find a Grave in mind.</td></tr>
+<tr><td><b>A clear-out for Deleted items</b></td><td>Today nothing is ever erased, which is safe but grows.</td></tr>
+<tr><td><b>Emails from your own address</b></td><td>Confirmation and reset emails currently come from a Google address with a project number and can land in Spam. It matters when you sell the app.</td></tr>
+<tr><td><b>Templates and KML</b></td><td>Both sketched in the Blueprint, neither started.</td></tr>
+</tbody></table></div>
+<hr>
+<h2 id="13-if-something-looks-wrong">13 · If something looks wrong</h2>
+<div class="tw"><table><thead><tr><th>What you see</th><th>What to do</th></tr></thead><tbody>
+<tr><td>The app shows an old build</td><td><b>More → Version → Check for updates</b>, then the banner. If it stays behind, <b>Reinstall the app</b> — your records are not touched.</td></tr>
+<tr><td>"Waiting for approval"</td><td>The owner has to approve your email. Nothing is lost meanwhile.</td></tr>
+<tr><td>Photos show as "Not sent yet" on the PC</td><td>Press <b>Send</b> on the phone; the PC picks them up.</td></tr>
+<tr><td>"That folder isn't there"</td><td>The drive is unplugged. Nothing was written. Plug it in and try again.</td></tr>
+<tr><td>Nothing filed by Bring in new</td><td>Everything had been filed before. Use <b>Bring in everything again</b> only if you changed folders.</td></tr>
+<tr><td>An edited photo is not found</td><td>It must sit beside the original and be named after it: <code>Old Salem Church 01 edited.jpg</code>.</td></tr>
+<tr><td>No GPS fix</td><td>Give it a moment outdoors; the Position tile turns green. Diagnostics says whether the phone is giving the app location at all.</td></tr>
+<tr><td>The compass reads oddly</td><td>Metal roofs, vehicles and fences pull it. <b>Set by hand</b> and drag the needle; it is honest, and it never fails.</td></tr>
+</tbody></table></div>
+<hr>
+<p><i>History Scout is built and maintained for Faison Digital Works, LLC. The app, this manual and the Blueprint are kept in <code>Desktop\FAISON DIGITAL WORKS\HISTORY APP</code>.</i></p>
+<footer>History Scout · Faison Digital Works, LLC · this page is kept up to date as each build lands.</footer>
+</div>
+</body>
+</html>
