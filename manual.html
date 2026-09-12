@@ -7,13 +7,18 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>
   .backbar{position:sticky;top:0;z-index:5;background:rgba(244,236,217,.94);border-bottom:1px solid #C0B08C;
-    backdrop-filter:blur(6px);padding:10px 16px;font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+    backdrop-filter:blur(6px);padding:12px 16px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
   .backbar a{color:#8A5312;text-decoration:none;font-weight:700}
   @media (prefers-color-scheme:dark){ .backbar{background:rgba(28,23,19,.94);border-bottom-color:#463B31} .backbar a{color:#D9A254} }
 </style>
 </head>
 <body>
-<div class="backbar"><a href="./">&larr; History Scout</a></div>
+<div class="backbar" id="backbar"><a href="./">&larr; Back to History Scout</a></div>
+<script>
+  /* Inside the app this page sits in a panel with its own Done button, so its back bar would be a
+     second way out and could load the app inside itself. Opened on its own, the bar stays. */
+  if (window.top !== window.self) document.getElementById("backbar").hidden = true;
+</script>
 <title>History Scout Owner's Manual</title>
 <style>
   :root{
@@ -63,7 +68,7 @@
 <h1 class="title">History Scout — Owner's Manual</h1>
 <p><b>Record today. Preserve tomorrow.</b></p>
 <nav class="toc"><b>What is in here</b><ol><li><a href="#what-history-scout-is">What History Scout is</a></li><li><a href="#1-getting-in">1 · Getting in</a></li><li><a href="#2-the-capture-screen-recording-in-the-field">2 · The Capture screen — recording in the field</a></li><li><a href="#3-the-compass">3 · The compass</a></li><li><a href="#4-your-sites">4 · Your sites</a></li><li><a href="#5-the-photo-viewer">5 · The photo viewer</a></li><li><a href="#6-the-map">6 · The map</a></li><li><a href="#7-more-your-account">7 · More — your account</a></li><li><a href="#8-more-your-computer">8 · More — your computer</a></li><li><a href="#9-more-exports-settings-and-the-rest">9 · More — exports, settings and the rest</a></li><li><a href="#10-a-full-trip-end-to-end">10 · A full trip, end to end</a></li><li><a href="#11-where-everything-lives-and-what-it-costs">11 · Where everything lives, and what it costs</a></li><li><a href="#12-what-is-still-to-build">12 · What is still to build</a></li><li><a href="#13-if-something-looks-wrong">13 · If something looks wrong</a></li></ol></nav>
-<p>For BUILD 15, 12 September 2026 · <a href="https://rfsmfd.github.io/History_Scout/">https://rfsmfd.github.io/History_Scout/</a></p>
+<p>For BUILD 16, 12 September 2026 · <a href="https://rfsmfd.github.io/History_Scout/">https://rfsmfd.github.io/History_Scout/</a></p>
 <h2 id="what-history-scout-is">What History Scout is</h2>
 <p>A field notebook for old places. You photograph a homestead, church, school, cemetery, archaeological site or store; the app records where you stood, which way you faced, and when — then gets out of your way. The writing up happens later, at the kitchen table, on whichever device you have to hand.</p>
 <p>It works in two halves:</p>
@@ -331,8 +336,9 @@
 </ul>
 <p>When a new build is published, a banner appears at the top: tap it to update.</p>
 <h3>How to use it</h3>
-<p>Two buttons, <b>📖 Owner’s Manual</b> and <b>🧭 Field Card</b>, open this manual and the one-page quick card. They are</p>
-<p>pages on History Scout’s own website, so they need no signing in and are saved for reading with no signal.</p>
+<p>Two buttons, <b>📖 Owner’s Manual</b> and <b>🧭 Field Card</b>, open this manual and the one-page quick card. They open</p>
+<p>inside the app with a <b>Done</b> button, so there is always a way back; they need no signing in, and they are saved for</p>
+<p>reading with no signal, like the app itself.</p>
 <h3>Diagnostics</h3>
 <p>A plain list of what is working on this device: secure connection, installed to the home screen, GPS, compass permission, whether sensor readings are arriving, storage, the map and export libraries, the offline helper, your account, and whether you are online. Useful when something behaves oddly.</p>
 <hr>

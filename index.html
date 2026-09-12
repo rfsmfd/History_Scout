@@ -300,6 +300,15 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 .sens .t{font-size:16px;font-weight:650}.sens .d{font-size:14px;color:var(--ink3);margin-top:2px;line-height:1.4}
 .sens .tg{margin-left:auto}
 
+/* ---------- BUILD 16: the manual and the card, shown inside the app ---------- */
+#docview{position:fixed;inset:0;z-index:1200;background:var(--bg);display:none;flex-direction:column}
+#docview.on{display:flex}
+#docview .bar{flex:0 0 auto;display:flex;align-items:center;gap:10px;background:var(--bg2);
+  border-bottom:1px solid var(--line);padding:calc(var(--safe-top) + 9px) 12px 9px}
+#docview .bar h2{margin:0;flex:1;font-size:18px;font-weight:700}
+#docview .bar .btn{flex:0 0 auto;min-height:44px;padding:10px 18px}
+#docview iframe{flex:1 1 auto;width:100%;border:0;background:var(--bg)}
+
 /* ---------- BUILD 12: Bring in new ---------- */
 .folder{display:flex;gap:9px;align-items:baseline;font-size:15px;color:var(--ink2);margin:0 0 6px;line-height:1.4}
 .folder b{color:var(--ink);font-weight:650}
@@ -563,6 +572,11 @@ details.more[open] > summary::before{transform:rotate(90deg)}
   </div>
 </div>
 
+<div id="docview" role="dialog" aria-label="History Scout help">
+  <div class="bar"><h2 id="docTitle">Owner’s Manual</h2><button class="btn pri" id="docDone">Done</button></div>
+  <iframe id="docFrame" title="History Scout help" src="about:blank"></iframe>
+</div>
+
 <div id="sheet"><div id="sheetbody"><div class="grab"></div><div id="sheetcontent"></div></div></div>
 <div id="viewer"><div class="im"><img id="viewerImg" alt=""></div><div class="bar" id="viewerBar"></div></div>
 <button id="updatebar" onclick="location.reload()">↻ New version ready — tap to update</button>
@@ -579,7 +593,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 15;
+const BUILD = 16;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -2131,8 +2145,17 @@ $$('#v-more .tg[data-set]').forEach(t => t.onclick = () => {
 });
 $('#setRecorder').onchange = e => { S.settings.recordedBy = e.target.value.trim(); saveSettings(); toast('Saved'); };
 $('#setRadius').onchange   = e => { S.settings.groupRadius = +e.target.value; saveSettings(); toast('Saved'); };
-$('#btnHelpManual').onclick = () => window.open('manual.html', '_blank');
-$('#btnHelpCard').onclick   = () => window.open('card.html', '_blank');
+/* BUILD 16: shown over the app with a Done button. On a phone the app has no browser bar, so a page
+   opened in a new window left no way back. */
+function openDoc(file, title){
+  $('#docTitle').textContent = title;
+  $('#docFrame').src = file + '?t=' + BUILD;
+  $('#docview').classList.add('on');
+}
+function closeDoc(){ $('#docview').classList.remove('on'); $('#docFrame').src = 'about:blank'; }
+$('#docDone').onclick = closeDoc;
+$('#btnHelpManual').onclick = () => openDoc('manual.html', 'Owner’s Manual');
+$('#btnHelpCard').onclick   = () => openDoc('card.html', 'Field Card');
 $('#btnCheckUpd').onclick  = checkNow;
 $('#btnReinstall').onclick = reinstallApp;
 
