@@ -570,7 +570,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 13;
+const BUILD = 14;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -809,6 +809,12 @@ const origFile   = p => (p.files || []).find(f => f.role === 'original') || (p.b
                    || (p.origMeta ? Object.assign({ role: 'original', blob: null }, p.origMeta) : null);   // BUILD 11: taken on another device
 const screenBlob = p => p.display || (origFile(p) || {}).blob;
 const sizeLabel  = p => { const f = origFile(p) || {}; return f.fullSize === true ? 'Full size, exactly as taken' : f.fullSize === false ? 'Reduced to 2,400 pixels' : 'Saved before BUILD 9 — may be reduced'; };
+/* BUILD 14: versions you fixed in Photoshop, oldest first. The newest is the one the app shows and
+   stamps; the original is never touched, never re-saved, and never replaced. */
+const editFiles = p => (p.files || []).filter(f => f.role === 'edited').sort((a, b) => (a.at || 0) - (b.at || 0));
+const editFile  = p => { const e = editFiles(p); return e.length ? e[e.length - 1] : null; };
+const bestFile  = p => editFile(p) || origFile(p);
+const hasEdit   = p => !!(editFile(p) || (p.editMeta && p.editMeta.length));
 const EXT = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/heif': 'heif', 'image/webp': 'webp', 'image/tiff': 'tif' };
 const fileExt = f => EXT[((f && f.type) || '').toLowerCase()] || (((f && f.name) || '').split('.').pop() || 'jpg').toLowerCase();
 
@@ -1433,7 +1439,7 @@ async function attachTo(siteId, recs){
    side — about 12 megapixels at 4:3 — plenty for a labelled photo, and always safe. */
 const STAMP_EDGE = 4000;
 async function stamp(photo, site){
-  const o = origFile(photo);
+  const o = bestFile(photo);
   let loaded;
   try{ loaded = await loadImage(o.blob); }
   catch(e){ loaded = await loadImage(screenBlob(photo)); }   // e.g. a HEIC original this browser can't decode
@@ -1575,7 +1581,7 @@ function paintSites(){
 const isDesk = () => window.matchMedia('(min-width: 1000px)').matches;
 function sitePhotosHTML(s){
   return photosOf(s.id).map((p, i) => '<div class="cell"><img src="' + photoURL(p) + '" data-pid="' + p.id + '" alt=""><span class="n">' +
-    (i + 1) + (p.up && p.up.done ? ' ☁' : '') + '</span></div>').join('');
+    (i + 1) + (hasEdit(p) ? ' ✨' : '') + (p.up && p.up.done ? ' ☁' : '') + '</span></div>').join('');
 }
 function mountSite(s, html){
   if(!isDesk()){ openSheet(html); return; }
@@ -1767,7 +1773,7 @@ async function openViewer(pid, siteId){
   const v = $('#viewer'); v.classList.add('on');
   vzOpen(p);
   if(!S.settings.zoomHinted){ toast('Pinch or double-tap the photo to check sharpness', 3200); S.settings.zoomHinted = true; saveSettings(); }
-  let stamped = null, showing = S.settings.stampView;
+  let stamped = null, showing = S.settings.stampView, showOrig = false, origURL = null;
 
   /* The buttons are drawn FIRST, for this photo, and the screen copy shows at once. With
      full-size originals the stamp takes a second or more to draw; the old order left the
@@ -1779,6 +1785,13 @@ async function openViewer(pid, siteId){
     vzReset();
     drawBar();
     $('#viewerImg').src = photoURL(p);
+    /* BUILD 14: the photo you fixed is what shows; this puts the camera's own file back on screen,
+       plain, for comparing. Neither file is changed by looking at it. */
+    if(showOrig){
+      const o = origFile(p);
+      if(o && o.blob){ if(origURL) URL.revokeObjectURL(origURL); origURL = URL.createObjectURL(o.blob); $('#viewerImg').src = origURL; }
+      return;
+    }
     if(!showing || !(screenBlob(p) || (origFile(p) || {}).blob)) return;   // BUILD 11: nothing to stamp until it is sent
     if(!stamped) stamped = await stamp(p, s);
     if(v._showing !== token || !showing) return;
@@ -1788,11 +1801,13 @@ async function openViewer(pid, siteId){
   const drawBar = () => {
     $('#viewerBar').innerHTML = `
       <button class="btn" id="vOverlay">${showing?'🚫 Hide':'🏷 Show'} overlay</button>
+      ${hasEdit(p) ? '<button class="btn" id="vOrig">' + (showOrig ? '✨ Show edited' : '🖼 Show original') + '</button>' : ''}
       <button class="btn" id="vInfo">ℹ️ Details</button>
       <button class="btn" id="vMove">↔ Move</button>
       <button class="btn" id="vDel">🗑</button>
       <button class="btn pri" id="vClose">Done</button>`;
     $('#vOverlay').onclick = () => { showing=!showing; render(); };
+    const orig = $('#vOrig'); if(orig) orig.onclick = () => { showOrig = !showOrig; render(); };
     $('#vClose').onclick   = () => v.classList.remove('on');
     $('#vInfo').onclick    = () => {
       v.classList.remove('on');
@@ -1810,7 +1825,10 @@ async function openViewer(pid, siteId){
         <div class="kv"><span class="k">Saved at</span><span class="v">${sizeLabel(p)}</span></div>
         <div class="kv"><span class="k">File size</span><span class="v">${fmtBytes(p.size)}</span></div>
         <div class="kv"><span class="k">Online copy</span><span class="v">${p.up&&p.up.done?'Sent '+fmtTime(p.up.at):'Not sent yet'}</span></div>
-        <button class="btn full" id="pBack" style="margin-top:14px">← Back to site</button>`);
+        <div class="kv"><span class="k">Edited versions</span><span class="v">${editFiles(p).length ? editFiles(p).map(f=>esc(f.name||'edited')).join('<br>') : (p.editMeta&&p.editMeta.length ? p.editMeta.map(f=>esc(f.name||'edited')).join('<br>') + '<br>(on another device)' : 'none')}</span></div>
+        <button class="btn full" id="pAddEdit" style="margin-top:12px">✨ Add edited version</button>
+        <button class="btn full" id="pBack" style="margin-top:9px">← Back to site</button>`);
+      $('#pAddEdit').onclick = () => pickEdit(p, () => { closeSheet(); openSite(siteId); });
       $('#pBack').onclick = () => { closeSheet(); openSite(siteId); };
     };
     $('#vMove').onclick = () => {
@@ -1929,14 +1947,14 @@ function csvSites(sites = S.sites){
 }
 function csvPhotos(sites = S.sites){
   const paths = sitePaths();
-  const head = ['photo_id','site_id','site_name','file','taken_iso','latitude','longitude','accuracy_m',
+  const head = ['photo_id','site_id','site_name','file','edited_file','taken_iso','latitude','longitude','accuracy_m',
                 'position_source','facing_deg','facing_cardinal','heading_source','exif_direction','elevation_ft',
                 'width','height','bytes','file_type','full_size'];
   const rows = [];
   for(const st of sites){
     photosOf(st.id).forEach((p, i) => {
       const o = origFile(p) || {};
-      rows.push([p.id, st.id, st.name, photoPath(paths.get(st.id), i, p),
+      rows.push([p.id, st.id, st.name, photoPath(paths.get(st.id), i, p), (editFile(p) || {}).name || '',
         new Date(p.takenAt).toISOString(), p.lat ?? '', p.lon ?? '', p.acc != null ? p.acc.toFixed(1) : '',
         p.gpsSource, p.heading != null ? p.heading.toFixed(0) : '', p.heading != null ? cardinal(p.heading) : '',
         p.headingSource ?? '', p.exifDir != null ? p.exifDir.toFixed(0) : '', p.alt != null ? Math.round(p.alt * 3.28084) : '',
@@ -2033,6 +2051,15 @@ async function exportZip(sites, label, btn){
         let ob = o && o.blob;
         if(!ob && ph[i].up && ph[i].up.done){ try{ ob = await fetchOriginal(ph[i]); }catch(e){ ob = null; } }   // BUILD 11: taken on another device
         if(ob) zip.file(photoPath(sp, i, ph[i]), ob, { binary: true }); else missing++;
+        /* BUILD 14: your fixed copy goes out beside the original, under the NAME YOU SAVED IT AS, so the
+           file in the folder and the photos list agree. */
+        const ed = editFile(ph[i]);
+        if(ed && ed.blob){
+          const base = photoPath(sp, i, ph[i]);
+          const name = ed.name && /edited/i.test(ed.name) ? base.replace(/[^/]+$/, ed.name)
+                                                          : base.replace(/[.]([^.]+)$/, ' edited.' + fileExt(ed));
+          zip.file(name, ed.blob, { binary: true });
+        }
         if(S.settings.stampCopies && (screenBlob(ph[i]) || (o && o.blob))){
           const stamped = await stamp(ph[i], st);
           zip.file('Stamped copies/' + sp.cat + '/' + sp.site + '/' + sp.site + ' ' + photoNum(i) + ' stamped.jpg', stamped, { binary: true });
@@ -2249,7 +2276,7 @@ const now = () => Date.now();
    every form field on its own, as 'f.<field>'. Position is one part: latitude, longitude,
    accuracy, elevation and heading always change together. */
 const SITE_KEYS  = ['name', 'category', 'pos', 'sensitive', 'deleted'];
-const PHOTO_KEYS = ['siteId', 'note', 'deleted', 'up'];
+const PHOTO_KEYS = ['siteId', 'note', 'deleted', 'up', 'edit'];
 const keysOf = (kind, r) => kind === 'site'
   ? [...SITE_KEYS, ...Object.keys((r && r.fields) || {}).map(k => 'f.' + k)]
   : PHOTO_KEYS.slice();
@@ -2261,11 +2288,13 @@ function getKey(kind, r, k){
     if(k.startsWith('f.')) return (r.fields || {})[k.slice(2)] ?? '';
     if(k === 'sensitive') return !!r.sensitive;
   }
+  if(k === 'edit') return r.editMeta || [];
   if(k === 'deleted') return r.deleted || 0;
   if(k === 'note') return r.note || '';
   return r[k] ?? null;
 }
 function setKey(kind, r, k, v){
+  if(kind === 'photo' && k === 'edit'){ r.editMeta = v || []; return; }   // BUILD 14
   if(kind === 'site'){
     if(k === 'pos'){ v = v || {}; r.lat = v.lat ?? null; r.lon = v.lon ?? null; r.acc = v.acc ?? null; r.alt = v.alt ?? null; r.heading = v.heading ?? null; return; }
     if(k.startsWith('f.')){ r.fields = r.fields || {}; r.fields[k.slice(2)] = v; return; }
@@ -2481,7 +2510,7 @@ const Acct = {
 /* What goes online for a record: everything except the photo files themselves and the
    bookkeeping that only matters on this device. */
 const SITE_OUT  = ['id', 'name', 'category', 'lat', 'lon', 'acc', 'alt', 'heading', 'created', 'updated', 'sensitive', 'deleted', 'fields', '_t'];
-const PHOTO_OUT = ['id', 'siteId', 'takenAt', 'lat', 'lon', 'acc', 'alt', 'gpsSource', 'heading', 'headingSource', 'exifDir',
+const PHOTO_OUT = ['id', 'siteId', 'takenAt', 'lat', 'lon', 'acc', 'alt', 'gpsSource', 'heading', 'headingSource', 'exifDir', 'editMeta',
                    'w', 'h', 'size', 'note', 'deleted', 'up', 'updated', 'origMeta', '_t'];
 function toRemote(kind, r){
   const out = {};
@@ -2643,9 +2672,11 @@ const hasLocal = p => { const o = origFile(p); return !!(o && o.blob); };
 const Send = {
   running: false, cancel: false, task: null, done: 0, total: 0, bytesDone: 0, bytesTotal: 0, err: null, lastResult: '',
 
-  pending(){ return [...S.all.photos.values()].filter(p => !p.deleted && !(p.up && p.up.done) && hasLocal(p) &&
+  editsWaiting(p){ return editFiles(p).filter(f => !((p.up && p.up.edits) || []).some(u => u.name === f.name && u.size === f.size)).length; },
+  pending(){ return [...S.all.photos.values()].filter(p => !p.deleted && (!(p.up && p.up.done) || Send.editsWaiting(p)) && hasLocal(p) &&
                      S.all.sites.has(p.siteId) && !S.all.sites.get(p.siteId).deleted); },
-  pendingBytes(){ return Send.pending().reduce((a, p) => a + origFile(p).blob.size + (p.display ? p.display.size : 0), 0); },
+  pendingBytes(){ return Send.pending().reduce((a, p) => a + ((p.up && p.up.done) ? 0 : origFile(p).blob.size + (p.display ? p.display.size : 0)) +
+    editFiles(p).filter(f => !((p.up && p.up.edits) || []).some(u => u.name === f.name && u.size === f.size)).reduce((b, f) => b + f.blob.size, 0), 0); },
 
   async run(){
     if(Send.running) return;
@@ -2681,10 +2712,29 @@ const Send = {
   async one(p){
     const o = origFile(p);
     const base = 'users/' + S.acct.uid + '/photos/' + p.id + '/';
-    const origPath = base + 'original.' + fileExt(o), dispPath = base + 'display.jpg';
-    const om = await Send.file(origPath, o.blob, o.type || 'image/jpeg');
-    const dm = p.display ? await Send.file(dispPath, p.display, 'image/jpeg') : null;
-    p.up = { done: true, at: now(), orig: { path: origPath, size: +om.size }, disp: dm ? { path: dispPath, size: +dm.size } : null };
+    const up = Object.assign({ edits: [] }, p.up || {});
+    if(!up.done){
+      const origPath = base + 'original.' + fileExt(o), dispPath = base + 'display.jpg';
+      const om = await Send.file(origPath, o.blob, o.type || 'image/jpeg');
+      const dm = p.display ? await Send.file(dispPath, p.display, 'image/jpeg') : null;
+      up.done = true; up.at = now();
+      up.orig = { path: origPath, size: +om.size };
+      up.disp = dm ? { path: dispPath, size: +dm.size } : null;
+    }
+    /* BUILD 14: each version you fixed goes up beside the original, under its own name, and nothing
+       already online is ever replaced. */
+    up.edits = up.edits || [];
+    let n = 0;
+    for(const f of editFiles(p)){
+      n++;
+      if(up.edits.some(u => u.name === f.name && u.size === f.size)) continue;
+      const path = base + 'edited-' + n + '.' + fileExt(f);
+      const m = await Send.file(path, f.blob, f.type || 'image/jpeg');
+      let disp = null;
+      if(f.display){ const dm2 = await Send.file(base + 'edited-' + n + '-display.jpg', f.display, 'image/jpeg'); disp = { path: base + 'edited-' + n + '-display.jpg', size: +dm2.size }; }
+      up.edits.push({ path: path, size: +m.size, name: f.name || '', at: f.at || now(), disp: disp });
+    }
+    p.up = up;
     await putPhoto(p, ['up']);
   },
 
@@ -2724,7 +2774,8 @@ async function fetchDisplay(p){
   if(!p.up || !p.up.done || Fetch.busy.has(p.id) || S.acct.state !== 'ok' || !FB.m) return;
   Fetch.busy.add(p.id);
   try{
-    const st = FB.m.st, path = (p.up.disp || p.up.orig).path;
+    const last = ((p.up.edits || [])[((p.up.edits || []).length - 1)] || null);   // BUILD 14: the newest edit is what should show
+    const st = FB.m.st, path = ((last && (last.disp || last)) || p.up.disp || p.up.orig).path;
     p.display = await st.getBlob(st.ref(FB.st, path));
     await dbPut('photos', p);
     const u = S.urls.get(p.id); if(u){ URL.revokeObjectURL(u); S.urls.delete(p.id); }
@@ -3139,12 +3190,12 @@ function biPending(){
    the column that matters. The path inside your folder is there for you; the full path only if you
    typed where the folder actually is, because a web page is never told. */
 function csvFiled(rows){
-  const head = ['site_id', 'NAMEFEATURE', 'Category', 'photo_id', 'file_name', 'path_in_folder', 'full_path',
+  const head = ['site_id', 'NAMEFEATURE', 'Category', 'photo_id', 'file_name', 'edited_file', 'path_in_folder', 'full_path',
                 'taken_iso', 'latitude', 'longitude', 'facing_deg', 'width', 'height', 'bytes', 'full_size'];
   const body = rows.map(r => {
     const p = r.photo, o = origFile(p) || {};
     const full = BI.path ? BI.path.replace(/[\\/]+$/, '') + '\\' + r.pathInFolder : '';
-    return [r.site.id, r.site.name, catById(r.site.category).name, p.id, r.name, r.pathInFolder, full,
+    return [r.site.id, r.site.name, catById(r.site.category).name, p.id, r.name, (editFile(p) || {}).name || '', r.pathInFolder, full,
       new Date(p.takenAt).toISOString(), p.lat ?? '', p.lon ?? '', p.heading != null ? p.heading.toFixed(0) : '',
       p.w, p.h, p.size, o.fullSize === true ? 'yes' : o.fullSize === false ? 'no' : 'unknown'];
   });
@@ -3312,6 +3363,7 @@ function paintPC(){
   const waiting = [p.photos ? p.photos + ' photo' + (p.photos === 1 ? '' : 's') : '', p.fresh ? p.fresh + ' new site' + (p.fresh === 1 ? '' : 's') : '', p.changed ? p.changed + ' changed' : ''].filter(Boolean).join(', ');
   box.innerHTML = where +
     '<button class="btn pri full" id="pcGo" style="margin-top:10px">📥 Bring in new' + (waiting ? ' — ' + waiting : '') + '</button>' +
+    '<button class="btn full" id="pcEdits" style="margin-top:8px">✨ Check for edited photos</button>' +
     '<p class="hint" style="margin:10px 0 0">Photos land in <b>Category › Site</b> folders. Nothing already there is ever replaced, and only what hasn’t been brought in before is written.</p>' +
     waitingLine +
     (BI.result ? '<p class="formmsg good" style="margin:10px 0 0">Last run: ' + esc(BI.result) + '</p>' : '') +
@@ -3328,11 +3380,108 @@ function paintPC(){
       '<p class="hint" style="margin:-4px 0 0">Windows tells a web page the folder, never its address. Type it once and the photos list can carry full paths, which some ArcGIS tools prefer.</p>' +
     '</details>';
   on('pcGo', () => bringInNew($('#pcGo')));
+  on('pcEdits', () => biFindEdits($('#pcEdits')));
   on('pcAll', () => bringInNew($('#pcAll'), { all: true }));
   on('pcOne', biPickOne); on('pcF1', () => biPick('photos')); on('pcF2', () => biPick('records'));
   on('pcTwo', () => { BI.mode = 'split'; BI.advanced = true; biSave(); paintPC(); });
   const box2 = $('#pcPath');
   if(box2) box2.onchange = async () => { BI.path = box2.value.trim(); await biSave(); toast(BI.path ? 'Saved' : 'Cleared'); };
+}
+
+/* ======================================================================
+   BUILD 14 — THE PHOTO YOU FIXED
+   You replace the sky in Photoshop and save it beside the original as "Old Salem Church 01 edited.jpg".
+   This puts that file into the record: kept beside the original, never over it, and used from then on
+   for the screen, for stamped copies and for exports. Both files are kept for good.
+   ====================================================================== */
+async function addEdit(p, file){
+  /* A screen-sized copy is made from the edited file, so thumbnails and the viewer show your work
+     rather than the flat original. The edited file itself is stored exactly as you saved it. */
+  let w = null, h = null, display = null;
+  try{
+    const loaded = await loadImage(file);
+    w = loaded.img.naturalWidth; h = loaded.img.naturalHeight;
+    display = (await scaledJPEG(loaded.img, SCREEN_EDGE, 0.85)).blob;
+    loaded.revoke();
+  }catch(err){ console.warn('could not read the edited photo for a screen copy', err); }
+  const entry = { role: 'edited', blob: file, type: file.type || 'image/jpeg', name: file.name || 'edited.jpg',
+                  size: file.size, w: w, h: h, at: now(), display: display };
+  p.files = (p.files || []).concat([entry]);
+  p.editMeta = (p.editMeta || []).concat([{ name: entry.name, size: entry.size, w: w, h: h, at: entry.at }]);
+  if(display) p.display = display;
+  const u = S.urls.get(p.id); if(u){ URL.revokeObjectURL(u); S.urls.delete(p.id); }
+  await putPhoto(p, ['edit']);
+  return entry;
+}
+/* Handing one in by file — works anywhere, phone included. */
+function pickEdit(p, done){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async e => {
+    const f = (e.target.files || [])[0]; if(!f) return;
+    toast('Reading the edited photo…');
+    try{
+      await addEdit(p, f);
+      refreshAll();
+      toast('Added — the record now shows your edited version', 3200);
+      if(done) done();
+    }catch(err){ console.error(err); toast('Could not add that file: ' + err.message, 3600); }
+  };
+  inp.click();
+}
+
+/* One button on the computer: look through the site folders for files named after a photo already
+   filed there — "Old Salem Church 01 edited.jpg", and "… edited 2.jpg" for a second pass. Files are
+   only READ: nothing on your drive is renamed, moved, replaced or deleted. */
+const EDIT_EXT = ['jpg', 'jpeg', 'png', 'tif', 'tiff', 'webp', 'heic'];
+async function biFindEdits(btn){
+  const roots = await biReady(); if(!roots) return;
+  const old = btn ? btn.textContent : '';
+  let found = 0, already = 0, looked = 0;
+  const problems = [], names = [];
+  try{
+    const paths = sitePaths();
+    for(const st of [...S.sites].sort((a, b) => a.created - b.created)){
+      const sp = paths.get(st.id), ph = photosOf(st.id);
+      let dir = null;
+      try{ dir = await (await roots.photos.getDirectoryHandle(sp.cat)).getDirectoryHandle(sp.site); }
+      catch(err){ continue; }                                  // nothing filed for this site yet
+      const inFolder = [];
+      for await (const [n, h] of dir.entries()) if(h.kind === 'file') inFolder.push(n);
+      looked++;
+      for(const p of ph){
+        const filed = p.broughtIn && p.broughtIn.path && p.broughtIn.path !== 'downloaded'
+          ? p.broughtIn.path.split('\\').pop() : null;
+        if(!filed) continue;
+        const base = filed.replace(/\.[^.]+$/, '');
+        for(const n of inFolder){
+          const m = /^(.*) edited( \d+)?\.([^.]+)$/i.exec(n);
+          if(!m || m[1].toLowerCase() !== base.toLowerCase()) continue;
+          if(EDIT_EXT.indexOf(m[3].toLowerCase()) < 0) continue;
+          if(((p.editMeta || []).concat(editFiles(p))).some(f => (f.name || '').toLowerCase() === n.toLowerCase())){ already++; continue; }
+          if(btn) btn.textContent = '⏳ reading ' + n + '…';
+          try{
+            const f = await (await dir.getFileHandle(n)).getFile();
+            await addEdit(p, f);
+            found++; names.push(sp.site + ' — ' + n);
+          }catch(err){ problems.push('Could not read ' + n + ': ' + (err.message || err.name)); }
+        }
+      }
+    }
+  }catch(err){ problems.push('Stopped early: ' + (err.message || err.name)); }
+  finally{ if(btn) btn.textContent = old; }
+  refreshAll(); paintPC();
+  const li = [];
+  li.push('<li>Looked through <b>' + looked + '</b> site folder' + (looked === 1 ? '' : 's') + '.</li>');
+  li.push(found ? '<li><b>' + found + '</b> edited photo' + (found === 1 ? '' : 's') + ' added to their records:<br>' + names.map(esc).join('<br>') + '</li>'
+                : '<li>No new edited photos found. They need to sit beside the original and be named after it, like <b>Old Salem Church 01 edited.jpg</b>.</li>');
+  if(already) li.push('<li>' + already + ' ' + (already === 1 ? 'was' : 'were') + ' already in the record, and left alone.</li>');
+  for(const pr of problems) li.push('<li class="warn">' + esc(pr) + '</li>');
+  openSheet('<h2>Edited photos</h2><ul class="bi-report">' + li.join('') + '</ul>' +
+    '<p class="hint" style="margin-top:12px">Your files were only read. Nothing on the drive was renamed, moved or replaced, and the camera’s original stays in the record beside your edit.' +
+    (found ? ' Press <b>Send</b> to put the edited version online too.' : '') + '</p>' +
+    '<button class="btn pri full" id="feDone" style="margin-top:6px">Done</button>');
+  $('#feDone').onclick = closeSheet;
 }
 
 /* ======================================================================
