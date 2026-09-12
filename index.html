@@ -300,6 +300,13 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 .sens .t{font-size:16px;font-weight:650}.sens .d{font-size:14px;color:var(--ink3);margin-top:2px;line-height:1.4}
 .sens .tg{margin-left:auto}
 
+/* ---------- BUILD 12: Bring in new ---------- */
+.folder{display:flex;gap:9px;align-items:baseline;font-size:15px;color:var(--ink2);margin:0 0 6px;line-height:1.4}
+.folder b{color:var(--ink);font-weight:650}
+.folder .none{color:var(--warn);font-weight:650}
+.bi-report{font-size:16px;line-height:1.5;margin:10px 0 0}
+.bi-report li{margin:3px 0}
+
 /* ---------- BUILD 11: the desk layout, for a wide screen ----------
    Sites down the left, the record you pick on the right, its photos large beneath it. */
 #siteDetail{display:none}
@@ -414,6 +421,11 @@ details.more[open] > summary::before{transform:rotate(90deg)}
           <button class="btn" id="btnExportCsv">📄 CSV only</button>
           <button class="btn" id="btnExportGeo">🌐 GeoJSON</button>
         </div>
+      </div>
+
+      <div class="card" id="pcCard">
+        <h3>Your computer</h3>
+        <div id="pcBody"></div>
       </div>
 
       <div class="card">
@@ -558,7 +570,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 11;
+const BUILD = 12;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -2181,7 +2193,7 @@ function showView(v){
   $('#v-'+v).classList.add('on');
   $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   if(v==='map'){ initMap(); setTimeout(()=>{ map.invalidateSize(); paintMap(); }, 60); }
-  if(v==='more'){ paintAcct(); paintStorage(); runDiag(); paintCats(); paintSettings(); paintVersion(); }
+  if(v==='more'){ paintAcct(); paintPC(); paintStorage(); runDiag(); paintCats(); paintSettings(); paintVersion(); }
 }
 $$('#tabs button').forEach(b => b.onclick = () => showView(b.dataset.v));
 $('#btnCompass').onclick = () => enableCompass();
@@ -2964,6 +2976,224 @@ async function openRequests(){
 }
 
 /* ======================================================================
+   BUILD 12 — BRING IN NEW
+   On the computer, one button files everything that has not been filed before:
+     photos   -> <the folder you chose>\<Category>\<Site>\<Site> 01.jpg
+     records  -> <the folder you chose>\new-sites <date>.csv   (sites never brought in)
+                 <the folder you chose>\changed-sites <date>.csv (edited since they were)
+   Three rules, from the Blueprint:
+     - it NEVER overwrites a file. A sky you fixed in Photoshop cannot be put back by a later run,
+       even if you saved over the original. Anything already there is left exactly as it is.
+     - only what is new. Each photo and each site remembers when it came in, ON THIS COMPUTER —
+       that memory is never shared with your phone, because the folders belong to this computer.
+     - the drive has to be there. If the folder cannot be reached, it says so and writes nothing.
+   Edge and Chrome can write into folders. Safari and Firefox cannot, so there the same button
+   downloads one ZIP per site instead.
+   ====================================================================== */
+const canFolders = () => typeof window.showDirectoryPicker === 'function';
+const BI = { photos: null, records: null, names: {}, running: false, result: '', problems: [] };
+
+async function biLoad(){
+  const m = await dbGet('meta', 'folders');
+  if(m && m.v){ BI.photos = m.v.photos || null; BI.records = m.v.records || null; BI.names = m.v.names || {}; }
+}
+const biSave = () => dbPut('meta', { k: 'folders', v: { photos: BI.photos, records: BI.records, names: BI.names } });
+
+/* Chrome remembers the folder itself, but not always the permission — it is asked for again after a
+   restart. That ask has to come from a button press, which is why it happens here and not at startup. */
+async function biPermit(h){
+  if(!h) return false;
+  if(typeof h.queryPermission !== "function") return true;   // a browser that does not ask again, or a folder handed in by a test
+  try{
+    if(await h.queryPermission({ mode: 'readwrite' }) === 'granted') return true;
+    return await h.requestPermission({ mode: 'readwrite' }) === 'granted';
+  }catch(err){ return false; }
+}
+/* Is the folder actually there? An unplugged D: drive shows up here, before anything is written. */
+async function biReachable(h){
+  try{ for await (const _ of h.values()) break; return true; }catch(err){ return false; }
+}
+
+async function biPick(which){
+  try{
+    const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'hs-' + which, startIn: 'documents' });
+    BI[which] = h; BI.names[which] = h.name;
+    await biSave(); paintPC();
+    toast('Folder chosen: ' + h.name);
+  }catch(err){ if(err.name !== 'AbortError') toast('Could not use that folder: ' + err.message, 3400); }
+}
+
+async function biReady(){
+  if(!BI.photos || !BI.records){ toast('Choose both folders first'); return false; }
+  for(const [k, what] of [['photos', 'photo folder'], ['records', 'records folder']]){
+    if(!(await biPermit(BI[k]))){ toast('History Scout needs permission for the ' + what + ' — press the button again and allow it', 4200); return false; }
+    if(!(await biReachable(BI[k]))){
+      openSheet('<h2>That folder isn’t there</h2>' +
+        '<p class="hint">The ' + what + ' (<b>' + esc(BI.names[k] || '') + '</b>) cannot be reached. If it is on your D: drive, check the drive is plugged in and try again.</p>' +
+        '<p class="hint"><b>Nothing was written.</b></p><button class="btn pri full" id="biNo">OK</button>');
+      $('#biNo').onclick = closeSheet;
+      return false;
+    }
+  }
+  return true;
+}
+
+/* A file is only ever created when nothing of that name is there. */
+const biHas = async (dir, name) => { try{ await dir.getFileHandle(name); return true; }catch(err){ return false; } };
+async function biWrite(dir, name, blob){
+  const fh = await dir.getFileHandle(name, { create: true });
+  const w = await fh.createWritable();
+  await w.write(blob);
+  await w.close();
+}
+const biSub = (dir, name) => dir.getDirectoryHandle(name, { create: true });
+/* "Old Salem Church 01.jpg" — or the next free number, if that name is taken by a photo that was
+   filed earlier (deleting a photo shifts the numbering, and the file already there must not be touched). */
+async function biFreeName(dir, site, i, ext){
+  for(let n = i + 1; n <= i + 200; n++){
+    const name = site + ' ' + String(n).padStart(2, '0') + '.' + ext;
+    if(!(await biHas(dir, name))) return name;
+  }
+  return site + ' ' + Date.now() + '.' + ext;
+}
+async function biFreeFile(dir, base, ext){
+  if(!(await biHas(dir, base + '.' + ext))) return base + '.' + ext;
+  for(let n = 2; n < 100; n++){ const name = base + ' (' + n + ').' + ext; if(!(await biHas(dir, name))) return name; }
+  return base + ' ' + Date.now() + '.' + ext;
+}
+
+/* When the RECORD itself last changed — its name, category, position or any form field. Photos being
+   added move the site’s own timestamp too, and that must not put it on the “changed” list: nothing in the
+   CSV a person has to retype has changed. The per-field times BUILD 11 keeps answer this exactly. */
+const recUpdated = st => Math.max(0, ...Object.values(st._t || {}).filter(v => typeof v === 'number'));
+
+/* What is waiting to be brought in, for the card. */
+function biPending(){
+  let photos = 0, waiting = 0;
+  for(const p of S.photos){
+    if(p.broughtIn) continue;
+    if(hasLocal(p) || (p.up && p.up.done)) photos++; else waiting++;
+  }
+  const fresh = S.sites.filter(s => !s.broughtIn).length;
+  const changed = S.sites.filter(s => s.broughtIn && recUpdated(s) > (s.broughtIn.listed || 0)).length;
+  return { photos: photos, waiting: waiting, fresh: fresh, changed: changed };
+}
+
+async function bringInNew(btn){
+  if(BI.running) return;
+  if(!(await biReady())) return;
+  BI.running = true; BI.problems = []; BI.result = '';
+  const old = btn ? btn.textContent : '';
+  const stamp = new Date().toISOString().slice(0, 10);
+  let filed = 0, already = 0, waiting = 0, newRows = [], changedRows = [], wrote = [];
+  try{
+    const paths = sitePaths();
+    for(const st of [...S.sites].sort((a, b) => a.created - b.created)){
+      const sp = paths.get(st.id), ph = photosOf(st.id);
+      let dir = null;
+      for(let i = 0; i < ph.length; i++){
+        const p = ph[i];
+        if(p.broughtIn){ already++; continue; }
+        const o = origFile(p);
+        let blob = o && o.blob;
+        if(!blob && p.up && p.up.done){
+          if(btn) btn.textContent = '⏳ fetching a photo from your account…';
+          try{ blob = await fetchOriginal(p); }catch(err){ blob = null; BI.problems.push('Could not fetch a photo of ' + st.name + ' from your account: ' + (err.message || err.code)); }
+        }
+        if(!blob){ waiting++; continue; }                    // still on the phone, not sent yet
+        if(!dir) dir = await biSub(await biSub(BI.photos, sp.cat), sp.site);
+        const name = await biFreeName(dir, sp.site, i, fileExt(o));
+        await biWrite(dir, name, blob);
+        p.broughtIn = { at: now(), path: sp.cat + '\\' + sp.site + '\\' + name };
+        await dbPut('photos', p);                            // stays on this computer; never goes online
+        filed++;
+        if(btn) btn.textContent = '⏳ ' + filed + ' photo' + (filed === 1 ? '' : 's') + ' filed…';
+      }
+      if(!st.broughtIn) newRows.push(st);
+      else if(recUpdated(st) > (st.broughtIn.listed || 0)) changedRows.push(st);
+    }
+    if(btn) btn.textContent = '⏳ writing the lists…';
+    if(newRows.length){
+      const nm = await biFreeFile(BI.records, 'new-sites ' + stamp, 'csv');
+      await biWrite(BI.records, nm, new Blob([csvSites(newRows)], { type: 'text/csv' }));
+      wrote.push(nm + ' — ' + newRows.length + ' site' + (newRows.length === 1 ? '' : 's') + ' to import');
+      for(const st of newRows){ st.broughtIn = { at: now(), listed: recUpdated(st) }; await dbPut('sites', st); }
+    }
+    if(changedRows.length){
+      const nm = await biFreeFile(BI.records, 'changed-sites ' + stamp, 'csv');
+      await biWrite(BI.records, nm, new Blob([csvSites(changedRows)], { type: 'text/csv' }));
+      wrote.push(nm + ' — ' + changedRows.length + ' site' + (changedRows.length === 1 ? '' : 's') + ' you edited since, to update by hand');
+      for(const st of changedRows){ st.broughtIn.listed = recUpdated(st); await dbPut('sites', st); }
+    }
+  }catch(err){
+    console.error(err);
+    BI.problems.push('Stopped early: ' + (err.message || err.name));
+  }finally{
+    BI.running = false;
+    if(btn) btn.textContent = old;
+  }
+  biReport({ filed: filed, already: already, waiting: waiting, wrote: wrote, sites: newRows.length, changed: changedRows.length });
+  paintPC();
+}
+
+function biReport(r){
+  const li = [];
+  li.push('<li><b>' + r.filed + '</b> photo' + (r.filed === 1 ? '' : 's') + ' filed into <b>' + esc(BI.names.photos || 'your photo folder') + '</b>.</li>');
+  if(r.wrote.length) for(const w of r.wrote) li.push('<li>Wrote <b>' + esc(w) + '</b> into <b>' + esc(BI.names.records || 'your records folder') + '</b>.</li>');
+  else li.push('<li>No new or changed sites to list, so no CSV was written.</li>');
+  if(r.already) li.push('<li>' + r.already + ' photo' + (r.already === 1 ? ' was' : 's were') + ' already brought in before, and left alone.</li>');
+  if(r.waiting) li.push('<li>' + r.waiting + ' photo' + (r.waiting === 1 ? ' is' : 's are') + ' still only on the phone — press <b>Send</b> there, then bring in again.</li>');
+  for(const p of BI.problems) li.push('<li class="warn">' + esc(p) + '</li>');
+  BI.result = r.filed + ' photo' + (r.filed === 1 ? '' : 's') + ' filed' + (r.sites ? ', ' + r.sites + ' new site' + (r.sites === 1 ? '' : 's') + ' listed' : '') + (r.changed ? ', ' + r.changed + ' changed' : '');
+  openSheet('<h2>Brought in</h2><ul class="bi-report">' + li.join('') + '</ul>' +
+    '<p class="hint" style="margin-top:12px">Nothing already in those folders was changed or replaced. Photos you edit in Photoshop are safe from every later Bring in new.</p>' +
+    '<button class="btn pri full" id="biDone" style="margin-top:6px">Done</button>');
+  $('#biDone').onclick = closeSheet;
+}
+
+/* Safari, Firefox, and phones cannot write into folders: one ZIP per site instead, with the same
+   "only what's new" memory, so the same site is not downloaded twice. */
+async function biDownloadNew(btn){
+  const fresh = S.sites.filter(s => !s.broughtIn);
+  if(!fresh.length){ toast('Nothing new to bring in'); return; }
+  for(const st of fresh){
+    await exportZip([st], st.name, btn);
+    st.broughtIn = { at: now(), listed: recUpdated(st), downloaded: true };
+    await dbPut('sites', st);
+    for(const p of photosOf(st.id)){ if(!p.broughtIn && hasLocal(p)){ p.broughtIn = { at: now(), path: 'downloaded' }; await dbPut('photos', p); } }
+    await new Promise(r => setTimeout(r, 800));
+  }
+  toast(fresh.length + ' site' + (fresh.length === 1 ? '' : 's') + ' downloaded', 3200);
+  paintPC();
+}
+
+function paintPC(){
+  const box = $('#pcBody'); if(!box) return;
+  const p = biPending();
+  const waitingLine = p.waiting ? '<p class="hint" style="margin:8px 0 0">' + p.waiting + ' photo' + (p.waiting === 1 ? ' is' : 's are') + ' still only on the phone. Press <b>Send</b> there first.</p>' : '';
+  if(!canFolders()){
+    box.innerHTML = '<p class="hint" style="margin:0 0 11px">On a computer, in Edge or Chrome, History Scout files your photos straight into folders on your drive. This browser can’t write into folders, so it downloads one ZIP per site instead.</p>' +
+      '<button class="btn full" id="pcDown">⬇ Download ' + (p.fresh || 'new') + ' site' + (p.fresh === 1 ? '' : 's') + '</button>' + waitingLine;
+    $('#pcDown').onclick = () => biDownloadNew($('#pcDown'));
+    return;
+  }
+  const line = (k, what, hint) => '<div class="folder"><span>' + what + '</span>' +
+    (BI[k] ? '<b>' + esc(BI.names[k] || '') + '</b>' : '<span class="none">not chosen — ' + hint + '</span>') + '</div>';
+  box.innerHTML =
+    line('photos', 'Photos go to', 'pick D:\\History Scout') +
+    line('records', 'Records go to', 'pick C:\\GIS_Projects\\History Scout') +
+    '<div class="btnrow" style="margin:10px 0 0"><button class="btn" id="pcF1">📁 Photo folder</button><button class="btn" id="pcF2">📁 Records folder</button></div>' +
+    '<button class="btn pri full" id="pcGo" style="margin-top:9px">📥 Bring in new' +
+      (p.photos || p.fresh || p.changed ? ' — ' + [p.photos ? p.photos + ' photo' + (p.photos === 1 ? '' : 's') : '', p.fresh ? p.fresh + ' new site' + (p.fresh === 1 ? '' : 's') : '', p.changed ? p.changed + ' changed' : ''].filter(Boolean).join(', ') : '') + '</button>' +
+    '<p class="hint" style="margin:10px 0 0">Photos land in <b>Category › Site</b> folders; the ArcGIS lists go beside your GIS. Nothing already there is ever replaced, and only what hasn’t been brought in before is written.</p>' +
+    waitingLine +
+    (BI.result ? '<p class="formmsg good" style="margin:10px 0 0">Last run: ' + esc(BI.result) + '</p>' : '');
+  $('#pcF1').onclick = () => biPick('photos');
+  $('#pcF2').onclick = () => biPick('records');
+  $('#pcGo').onclick = () => bringInNew($('#pcGo'));
+}
+
+/* ======================================================================
    BOOT
    ====================================================================== */
 function refreshAll(){
@@ -2972,7 +3202,7 @@ function refreshAll(){
   paintRecBar();
   paintLastShot();
   paintSyncLine();
-  if($('#v-more').classList.contains('on')) paintAcct();
+  if($('#v-more').classList.contains('on')){ paintAcct(); paintPC(); }
   $('#kSites').textContent  = S.sites.length;
   $('#kPhotos').textContent = S.photos.length;
 }
@@ -2990,6 +3220,7 @@ function refreshAll(){
   /* BUILD 11: the sign-in page on first opening only; after that, straight to work, signal or not. */
   if(!S.acct.mode) showGate(true);
   if(S.acct.mode === 'account') fbLoad().catch(err => { console.warn('firebase', err); S.acct.state = S.acct.approved ? 'offline' : 'offline'; paintAcct(); paintSyncLine(); });
+  await biLoad();
   if(isDesk()) showView('sites');
   paintSyncLine();
   startGPS();
