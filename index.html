@@ -113,6 +113,25 @@ button{background:none;border:0;cursor:pointer}
 .bigbtn .ic{font-size:32px}
 .bigbtn.sec{background:var(--bg3);color:var(--ink);box-shadow:0 3px 0 #AC9B74;flex:0 0 34%;font-size:17px;padding:20px 8px}
 .bigbtn.sec .ic{font-size:26px}
+/* BUILD 19: the capture buttons never scroll away. His words: "When I flip camera horizontal 95% of the time
+   the Capture button is off screen." The page scrolls above them; they stay put — along the bottom when the
+   phone is upright, down the side when it is turned — with Capture on the side of the hand holding the phone. */
+#v-capture.on{display:flex;flex-direction:column;padding:0;overflow:hidden}
+#v-capture .cap-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 24px}
+#v-capture .cap-row{flex:0 0 auto;margin:0;padding:10px 14px 12px;background:var(--bg2);border-top:1px solid var(--line)}
+#btnLib{order:1} #btnCam{order:2}
+body.lefty #btnLib{order:2} body.lefty #btnCam{order:1}
+@media (orientation: landscape) and (max-height: 540px){
+  #v-capture.on{flex-direction:row}
+  body.lefty #v-capture.on{flex-direction:row-reverse}
+  #v-capture .cap-row{flex-direction:column;width:min(34%,230px);border-top:0;border-left:1px solid var(--line);
+    padding:10px calc(10px + env(safe-area-inset-right,0px)) 10px 10px}
+  body.lefty #v-capture .cap-row{border-left:0;border-right:1px solid var(--line);
+    padding:10px 10px 10px calc(10px + env(safe-area-inset-left,0px))}
+  #v-capture .cap-row .bigbtn{flex:1 1 auto;justify-content:center;padding:10px 8px}
+  #v-capture .cap-row .bigbtn.sec{flex:0 0 auto}
+  body.lefty #btnLib{order:1} body.lefty #btnCam{order:2}   /* Capture low in the column, under the thumb, either hand */
+}
 
 .card{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:12px}
 .card h3{margin:0 0 9px;font-size:16px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink2)}
@@ -344,6 +363,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 
     <!-- ============ CAPTURE ============ -->
     <div class="view on" id="v-capture">
+      <div class="cap-scroll">
       <div id="status">
         <div class="stat">
           <div class="lbl">Position</div>
@@ -367,11 +387,6 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       </div>
       <p class="syncline" id="syncLine" hidden></p>
 
-      <div class="cap-row">
-        <button class="bigbtn" id="btnCam"><span class="ic">📷</span>Capture Site</button>
-        <button class="bigbtn sec" id="btnLib"><span class="ic">🖼</span>From<br>Library</button>
-      </div>
-
       <div class="card lastshot" id="lastShot" hidden>
         <h3>Your last photo</h3>
         <button class="ls-img" id="lsOpen" aria-label="Open your last photo full screen"><img id="lsImg" alt="Your last photo"></button>
@@ -392,6 +407,13 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       <p class="hint" style="text-align:center;margin:16px 4px 0">
         Capture fast in the field — one tap, one category.<br>Fill in the details later at the kitchen table.
       </p>
+      </div>
+
+      <!-- BUILD 19: outside the scrolling part, so it is always on screen -->
+      <div class="cap-row">
+        <button class="bigbtn" id="btnCam"><span class="ic">📷</span>Capture Site</button>
+        <button class="bigbtn sec" id="btnLib"><span class="ic">🖼</span>From<br>Library</button>
+      </div>
     </div>
 
     <!-- ============ SITES ============ -->
@@ -465,6 +487,12 @@ details.more[open] > summary::before{transform:rotate(90deg)}
             <option value="91">100 yards — a house and its outbuildings</option>
             <option value="274">300 yards — a whole homestead or cemetery</option>
             <option value="402">a quarter mile — a farm</option>
+          </select>
+        </label>
+        <label class="f" style="margin:12px 0 0"><span>Capture button on the</span>
+          <select id="setHand">
+            <option value="right">Right — I hold the phone in my right hand</option>
+            <option value="left">Left — I hold the phone in my left hand</option>
           </select>
         </label>
         <label class="f" style="margin:12px 0 0"><span>Recorded by</span>
@@ -593,7 +621,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 18;
+const BUILD = 19;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -803,7 +831,7 @@ const S = {
   filter: 'all',
   currentSiteId: null,   // where photos are landing right now
   forceNew: false,       // you pressed "+ New" — the next photo starts a fresh site
-  settings: {fullSize:true, stampCopies:false, stampView:true, grouping:true, groupRadius:274, recordedBy:'', sticky:{}, settingsV:2},
+  settings: {fullSize:true, stampCopies:false, stampView:true, grouping:true, groupRadius:274, recordedBy:'', hand:'right', sticky:{}, settingsV:2},
   urls: new Map()            // photoId -> objectURL cache
 };
 const catById = id => S.cats.find(c=>c.id===id) || {id:'other', name:'Other', ic:'📍', color:'#7A8288'};
@@ -1109,7 +1137,22 @@ async function scaledJPEG(img, maxEdge, quality){
   return { blob: blob, w: cw, h: ch };
 }
 
-async function processPhoto(file){
+/* "2026:09:14 10:22:33" — the camera's own clock, read in the phone's time zone. */
+/* BUILD 19: the stored codes stay as they are (the CSV and ArcGIS read them); people read these. */
+function gpsWords(s){
+  return ({ 'live fix at capture': "Your phone's GPS, as the photo was saved",
+            'live fix at import':  "Your phone's GPS when it was brought in — taken minutes before",
+            'photo EXIF':          'The photo itself — written by the camera',
+            'none':                'Nowhere — the photo carried no location' })[s] || s || '—';
+}
+function exifTime(s){
+  const m = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(s || '');
+  if(!m) return null;
+  const t = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
+  return isNaN(t) ? null : t;
+}
+
+async function processPhoto(file, fromLib){
   const exif = await readEXIF(file);
   const {img, revoke} = await loadImage(file);
   const w = img.naturalWidth, h = img.naturalHeight;
@@ -1125,22 +1168,41 @@ async function processPhoto(file){
   const display = (await scaledJPEG(img, SCREEN_EDGE, 0.85)).blob;   // for the screen only, never exported
   revoke();
 
-  // GPS: live fix wins over EXIF (Safari often strips EXIF GPS from picked photos)
+  /* Where, and which way. BUILD 19: a photo brought in from the library keeps its OWN location and direction
+     when it carries them — it may have been taken miles away, days ago. Without its own, only a photo taken in
+     the last ten minutes borrows the phone's position now, and says so; an older one gets none rather than a
+     wrong one. Camera shots are unchanged: the live fix first, because Safari strips the camera's location. */
+  const taken = exifTime(exif.taken);
+  /* Trail cameras and some apps write location tags filled with zeros — latitude 0, longitude 0, in the ocean
+     off Africa. That is no location, not a real one. */
+  const ownGps = exif.lat != null && exif.lon != null && !(exif.lat === 0 && exif.lon === 0);
   const p = S.pos;
-  const useLive = !!p;
+  let pos = null, gpsSource = 'none';
+  if(!fromLib){
+    if(p){ pos = p; gpsSource = 'live fix at capture'; }
+    else if(ownGps){ pos = { lat: exif.lat, lon: exif.lon }; gpsSource = 'photo EXIF'; }
+  } else if(ownGps){
+    pos = { lat: exif.lat, lon: exif.lon }; gpsSource = 'photo EXIF';
+  } else if(p && taken != null && Math.abs(Date.now() - taken) <= 10 * 60000){
+    pos = p; gpsSource = 'live fix at import';
+  }
+  const hdg = fromLib
+    ? { v: exif.dir ?? null, src: exif.dir != null ? 'photo EXIF' : null }
+    : { v: S.hdg != null ? S.hdg : (exif.dir ?? null), src: S.hdg != null ? S.hdgSrc : (exif.dir != null ? 'photo EXIF' : null) };
   return {
     id: uid(), siteId: null, v: 2,
     files: [{ role: 'original', blob: original.blob, type: original.blob.type || file.type || 'image/jpeg',
               name: file.name || '', size: original.blob.size, w: original.w, h: original.h, fullSize: original.fullSize }],
     display: display, w: original.w, h: original.h, size: original.blob.size,
-    lat: useLive ? p.lat : (exif.lat ?? null),
-    lon: useLive ? p.lon : (exif.lon ?? null),
-    acc: useLive ? p.acc : null,
-    alt: useLive ? p.alt : null,
-    gpsSource: useLive ? 'live fix at capture' : (exif.lat!=null ? 'photo EXIF' : 'none'),
-    heading: S.hdg!=null ? S.hdg : (exif.dir ?? null),
-    headingSource: S.hdg!=null ? S.hdgSrc : (exif.dir!=null ? 'photo EXIF' : null),
+    lat: pos ? pos.lat : null,
+    lon: pos ? pos.lon : null,
+    acc: pos ? (pos.acc ?? null) : null,
+    alt: pos ? (pos.alt ?? null) : null,
+    gpsSource: gpsSource,
+    heading: hdg.v,
+    headingSource: hdg.src,
     exifDir: exif.dir ?? null,
+    exifTaken: taken,                                // BUILD 19: the camera's own clock, when the photo carries it
     takenAt: Date.now(),
     note: ''
   };
@@ -1286,7 +1348,7 @@ async function intake(files, input){
   toast(files.length>1 ? `Processing ${files.length} photos…` : 'Processing photo…', 4000);
   try{
     const recs = [];
-    for(const f of files) recs.push(await processPhoto(f));
+    for(const f of files) recs.push(await processPhoto(f, !!input && input.id === 'fileLib'));
     if(input) input.value = '';
     recs.from = (input && input.id === 'fileCam') ? 'camera' : 'library';
     routeRecs(recs);
@@ -1722,7 +1784,7 @@ function openSite(id){
     inp.onchange = async e => {
       const fs=[...e.target.files]; if(!fs.length) return;
       toast('Processing…',4000);
-      const recs=[]; for(const f of fs) recs.push(await processPhoto(f));
+      const recs=[]; for(const f of fs) recs.push(await processPhoto(f, !cap));
       await attachTo(s.id, recs);
       closeSheet(); openSite(s.id);
     };
@@ -1836,10 +1898,11 @@ async function openViewer(pid, siteId){
       v.classList.remove('on');
       openSheet(`<h2>Photo details</h2>
         <div class="kv"><span class="k">Taken</span><span class="v">${fmtTime(p.takenAt)}</span></div>
+        <div class="kv"><span class="k">Camera's own clock</span><span class="v">${p.exifTaken === undefined ? 'not recorded before BUILD 19' : p.exifTaken === null ? 'not in the photo' : fmtTime(p.exifTaken)}</span></div>
         <div class="kv"><span class="k">Latitude</span><span class="v">${p.lat!=null?p.lat.toFixed(6):'—'}</span></div>
         <div class="kv"><span class="k">Longitude</span><span class="v">${p.lon!=null?p.lon.toFixed(6):'—'}</span></div>
         <div class="kv"><span class="k">Accuracy</span><span class="v">${p.acc!=null?'±'+p.acc.toFixed(0)+' m':'—'}</span></div>
-        <div class="kv"><span class="k">Position source</span><span class="v">${esc(p.gpsSource)}</span></div>
+        <div class="kv"><span class="k">Location came from</span><span class="v">${esc(gpsWords(p.gpsSource))}</span></div>
         <div class="kv"><span class="k">Heading</span><span class="v">${p.heading!=null?p.heading.toFixed(0)+'° '+cardinal(p.heading):'—'}</span></div>
         <div class="kv"><span class="k">Heading source</span><span class="v">${esc(p.headingSource||'—')}</span></div>
         <div class="kv"><span class="k">EXIF direction</span><span class="v">${p.exifDir!=null?p.exifDir.toFixed(0)+'°':'not present'}</span></div>
@@ -2137,7 +2200,11 @@ function paintSettings(){
   $$('#v-more .tg[data-set]').forEach(t => t.classList.toggle('on', !!S.settings[t.dataset.set]));
   $('#setRecorder').value = S.settings.recordedBy || '';
   $('#setRadius').value   = String(S.settings.groupRadius || 274);
+  $('#setHand').value     = S.settings.hand === 'left' ? 'left' : 'right';
+  applyHand();
 }
+/* BUILD 19: Capture on the side of the hand holding the phone. Anything but 'left' is right-handed. */
+function applyHand(){ document.body.classList.toggle('lefty', S.settings.hand === 'left'); }
 $$('#v-more .tg[data-set]').forEach(t => t.onclick = () => {
   S.settings[t.dataset.set] = !S.settings[t.dataset.set];
   t.classList.toggle('on', S.settings[t.dataset.set]);
@@ -2145,6 +2212,7 @@ $$('#v-more .tg[data-set]').forEach(t => t.onclick = () => {
 });
 $('#setRecorder').onchange = e => { S.settings.recordedBy = e.target.value.trim(); saveSettings(); toast('Saved'); };
 $('#setRadius').onchange   = e => { S.settings.groupRadius = +e.target.value; saveSettings(); toast('Saved'); };
+$('#setHand').onchange     = e => { S.settings.hand = e.target.value; saveSettings(); applyHand(); toast('Saved'); };
 /* BUILD 16: shown over the app with a Done button. On a phone the app has no browser bar, so a page
    opened in a new window left no way back. */
 function openDoc(file, title){
@@ -2544,7 +2612,7 @@ const Acct = {
 /* What goes online for a record: everything except the photo files themselves and the
    bookkeeping that only matters on this device. */
 const SITE_OUT  = ['id', 'name', 'category', 'lat', 'lon', 'acc', 'alt', 'heading', 'created', 'updated', 'sensitive', 'deleted', 'fields', '_t'];
-const PHOTO_OUT = ['id', 'siteId', 'takenAt', 'lat', 'lon', 'acc', 'alt', 'gpsSource', 'heading', 'headingSource', 'exifDir', 'editMeta',
+const PHOTO_OUT = ['id', 'siteId', 'takenAt', 'exifTaken', 'lat', 'lon', 'acc', 'alt', 'gpsSource', 'heading', 'headingSource', 'exifDir', 'editMeta',
                    'w', 'h', 'size', 'note', 'deleted', 'up', 'updated', 'origMeta', '_t'];
 function toRemote(kind, r){
   const out = {};
