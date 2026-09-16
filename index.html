@@ -641,7 +641,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 27;
+const BUILD = 28;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -818,7 +818,7 @@ function fmtTime(ts){
 let db;
 function openDB(){
   return new Promise((res,rej)=>{
-    const r = indexedDB.open('historyscout', 1);
+    const r = indexedDB.open('historyscout', 2);   // BUILD 28: version 2 adds 'bytes'
     r.onupgradeneeded = e => {
       const d = e.target.result;
       if(!d.objectStoreNames.contains('sites')){
@@ -830,8 +830,10 @@ function openDB(){
         p.createIndex('siteId','siteId');
       }
       if(!d.objectStoreNames.contains('meta')) d.createObjectStore('meta',{keyPath:'k'});
+      if(!d.objectStoreNames.contains('bytes')) d.createObjectStore('bytes',{keyPath:'k'});
     };
-    r.onsuccess = () => res(r.result);
+    r.onblocked = () => { try{ alert('History Scout is open in another tab or window. Close the others so this one can update.'); }catch(e){} };
+    r.onsuccess = () => { r.result.onversionchange = () => r.result.close(); res(r.result); };
     r.onerror  = () => rej(r.error);
   });
 }
@@ -839,9 +841,94 @@ const tx = (store, mode='readonly') => db.transaction(store, mode).objectStore(s
 const idbReq = req => new Promise((res,rej)=>{ req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); });
 const dbGet    = (s,k) => idbReq(tx(s).get(k));
 const dbAll    = s     => idbReq(tx(s).getAll());
-const dbPut    = (s,v) => idbReq(tx(s,'readwrite').put(v));
+const dbPutRaw = (s,v) => idbReq(tx(s,'readwrite').put(v));
+const dbPut    = (s,v) => s === 'photos' ? putPhotoRecord(v) : dbPutRaw(s, v);   // BUILD 28: pictures never go in as Blobs
 const dbDel    = (s,k) => idbReq(tx(s,'readwrite').delete(k));
 const dbByIndex= (s,i,v)=> idbReq(tx(s).index(i).getAll(v));
+
+/* ======================================================================
+   BUILD 28 — PICTURE BYTES
+   A photo record keeps only a key (bk) for each picture; the picture itself is raw bytes in 'bytes'. In memory the
+   small screen copies are ordinary Blobs made from those bytes; full-size files are read only when needed.
+   ====================================================================== */
+const BYTES_OK = new WeakSet();          // in-memory Blobs whose bytes are already stored
+const unreadable = () => Object.assign(new Error('this phone could not read the picture'), { code: 'hs/unreadable' });
+async function storeBytes(key, blob){
+  let ab;
+  try{ ab = await blob.arrayBuffer(); }catch(e){ throw unreadable(); }
+  const n = ab.byteLength, type = blob.type || 'image/jpeg';
+  if(!n) throw unreadable();
+  await dbPutRaw('bytes', { k: key, ab: ab, type: type, n: n });
+  const back = await dbGet('bytes', key);                                   // read it back: saved means saved
+  if(!back || !back.ab || back.ab.byteLength !== n) throw Object.assign(new Error('the picture did not save on this phone'), { code: 'hs/notsaved' });
+  const mem = new Blob([ab], { type: type }); BYTES_OK.add(mem);
+  return mem;
+}
+async function loadBytes(key, type){
+  if(!key) return null;
+  const r = await dbGet('bytes', key);
+  if(!r || !r.ab || !r.ab.byteLength) return null;
+  const b = new Blob([r.ab], { type: type || r.type || 'image/jpeg' }); BYTES_OK.add(b);
+  return b;
+}
+/* The one way to get a picture file's bytes on this device. null = not here (freed, lost, or on the other device). */
+async function fileBlob(f){
+  if(!f || f.lost) return null;
+  if(f.blob) return f.blob;
+  return f.bk ? loadBytes(f.bk, f.type) : null;
+}
+const hasFile = f => !!(f && !f.lost && (f.blob || f.bk));
+/* Every write of a photo record. New pictures are stored as bytes and checked first; a failure throws, so the
+   photographer is told. A picture already lost is never stripped from the stored record: it is written back as it
+   was, and only if the phone refuses even that is the record saved without it. */
+async function putPhotoRecord(p, opts){
+  const migrate = !!(opts && opts.migrate);
+  const rec = Object.assign({}, p);
+  rec.files = [];
+  let keptLost = false;
+  for(const f of (p.files || [])){
+    if(f.freed && f.bk){ try{ await dbDel('bytes', f.bk); }catch(e){} f.bk = null; }
+    if(f.blob && (!f.lost || migrate)){                                    // opening the app tries a lost one again
+      const key = p.id + '|' + f.role + '|' + (f.at || 0) + '|' + (f.size || f.blob.size);
+      try{ await storeBytes(key, f.blob); f.bk = key; f.blob = null; delete f.lost; }
+      catch(err){ if(!migrate || err.code !== 'hs/unreadable') throw err; f.lost = true; }
+    }
+    if(f.display && !BYTES_OK.has(f.display) && (!f.displayLost || migrate)){
+      const key = p.id + '|' + f.role + '-display|' + (f.at || 0);
+      try{ f.display = await storeBytes(key, f.display); f.displayBk = key; delete f.displayLost; }
+      catch(err){ if(!migrate || err.code !== 'hs/unreadable') throw err; f.displayLost = true; }
+    }
+    const g = Object.assign({}, f); delete g.display;
+    if(!f.lost) delete g.blob; else keptLost = keptLost || !!f.blob;
+    rec.files.push(g);
+  }
+  if(p.display && !BYTES_OK.has(p.display) && (!p.displayLost || migrate)){
+    const key = p.id + '|display|' + p.display.size;
+    try{ p.display = await storeBytes(key, p.display); p.displayBk = key; delete p.displayLost; }
+    catch(err){ if(!migrate || err.code !== 'hs/unreadable') throw err; p.displayLost = true; }
+  }
+  rec.display = (p.displayLost && p.display) ? p.display : null; if(rec.display) keptLost = true;
+  rec.displayBk = p.displayBk || null;
+  try{ await dbPutRaw('photos', rec); }
+  catch(err){
+    if(!keptLost) throw err;
+    rec.files = rec.files.map(g => { const h = Object.assign({}, g); delete h.blob; return h; }); rec.display = null;
+    await dbPutRaw('photos', rec);
+  }
+  return p.id;
+}
+/* Opening the app: screen copies come back from bytes; records from before BUILD 28 are carried across once. */
+async function readyPhoto(p){
+  const legacy = (p.files || []).some(f => f.blob instanceof Blob || f.display instanceof Blob) || p.display instanceof Blob;
+  if(legacy){
+    try{ await putPhotoRecord(p, { migrate: true }); }catch(err){ console.warn('could not carry photo across', p.id, err); }
+  }
+  if(!p.display && p.displayBk) p.display = await loadBytes(p.displayBk, 'image/jpeg');
+  if(!p.display && p.displayBk) p.displayLost = true;
+  for(const f of (p.files || [])) if(!f.display && f.displayBk) f.display = await loadBytes(f.displayBk, 'image/jpeg');
+  return p;
+}
+const isLost = p => !!(p.displayLost || (origFile(p) || {}).lost) && !(p.up && p.up.done);
 
 /* ======================================================================
    STATE
@@ -890,7 +977,7 @@ async function upgradePhoto(p){
 }
 const origFile   = p => (p.files || []).find(f => f.role === 'original') || (p.blob ? { blob: p.blob, type: p.blob.type, fullSize: null } : null)
                    || (p.origMeta ? Object.assign({ role: 'original', blob: null }, p.origMeta) : null);   // BUILD 11: taken on another device
-const screenBlob = p => p.display || (origFile(p) || {}).blob;
+const screenBlob = p => (!p.displayLost && p.display) || (hasFile(origFile(p)) && origFile(p).blob) || null;   // BUILD 28: never a lost picture
 const sizeLabel  = p => { const f = origFile(p) || {}; return f.fullSize === true ? 'Full size, exactly as taken' : f.fullSize === false ? 'Reduced to 2,400 pixels' : 'Saved before BUILD 9 — may be reduced'; };
 /* BUILD 14: versions you fixed in Photoshop, oldest first. The newest is the one the app shows and
    stamps; the original is never touched, never re-saved, and never replaced. */
@@ -909,7 +996,7 @@ async function loadAll(){
      the screens show, rebuilt from it. Records from earlier builds get their change-times once. */
   S.all.sites = new Map(); S.all.photos = new Map();
   for(const st of sites){ if(stampLegacy('site', st)) await dbPut('sites', st); S.all.sites.set(st.id, st); }
-  for(const p0 of photos){ const p = await upgradePhoto(p0); if(stampLegacy('photo', p)) await dbPut('photos', p); S.all.photos.set(p.id, p); }
+  for(const p0 of photos){ const p = await upgradePhoto(p0); await readyPhoto(p); if(stampLegacy('photo', p)){ try{ await dbPut('photos', p); }catch(e){} } S.all.photos.set(p.id, p); }
   S.cats   = (cats && cats.v && cats.v.length) ? cats.v : DEFAULT_CATS.slice();
   const cs = await dbGet('meta', 'catsync');
   S.catAll = (cs && cs.v && cs.v.all) || S.cats.slice(); S.catT = (cs && cs.v && cs.v.t) || {}; S.catGone = (cs && cs.v && cs.v.gone) || {};
@@ -939,10 +1026,10 @@ const photosOf     = id => S.photos.filter(p=>p.siteId===id).sort((a,b)=>a.taken
 const phSVG = (a, b) => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
   '<rect width="100" height="100" fill="#DCD0B1"/><text x="50" y="47" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#463B29">' + a +
   '</text><text x="50" y="62" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#463B29">' + b + '</text></svg>');
-const PH_WAIT = phSVG('Not sent', 'yet'), PH_LOAD = phSVG('Loading', '…');
+const PH_WAIT = phSVG('Not sent', 'yet'), PH_LOAD = phSVG('Loading', '…'), PH_LOST = phSVG('Picture', 'lost');
 function photoURL(p){
   const b = screenBlob(p);
-  if(!b){ if(p.up && p.up.done){ fetchDisplay(p); return PH_LOAD; } return PH_WAIT; }
+  if(!b){ if(p.up && p.up.done){ fetchDisplay(p); return PH_LOAD; } return isLost(p) ? PH_LOST : PH_WAIT; }
   if(!S.urls.has(p.id)) S.urls.set(p.id, URL.createObjectURL(b));
   return S.urls.get(p.id);
 }
@@ -1310,7 +1397,7 @@ function vzUseOriginal(){
   if(!o.blob){                                     // BUILD 11: taken on another device — fetch the full-size original
     if(VZ.fetching) return;
     const p = VZ.photo; VZ.fetching = true;
-    fetchOriginal(p).then(b => {
+    (hasFile(o) ? fileBlob(o) : fetchOriginal(p)).then(b => {   // BUILD 28: from this phone's bytes first
       VZ.fetching = false;
       if(!b || VZ.photo !== p || VZ.restoreSrc || VZ.s <= 1.05) return;
       if(!VZ.fullURL) VZ.fullURL = URL.createObjectURL(b);
@@ -1418,7 +1505,8 @@ async function intake(files, input){
     await routeRecs(recs);
   }catch(err){
     console.error(err);
-    toast('Could not read that photo');
+    if(err && (err.code === 'hs/notsaved' || err.code === 'hs/unreadable')) toast('⚠ That photo did NOT save on this phone. Take it again.', 8000);
+    else toast('Could not read that photo');
   }
 }
 
@@ -1555,7 +1643,7 @@ const STAMP_EDGE = 4000;
 async function stamp(photo, site){
   const o = bestFile(photo);
   let loaded;
-  try{ loaded = await loadImage(o.blob); }
+  try{ loaded = await loadImage(await fileBlob(o)); }
   catch(e){ loaded = await loadImage(screenBlob(photo)); }   // e.g. a HEIC original this browser can't decode
   const img = loaded.img, revoke = loaded.revoke;
   const sc = Math.min(1, STAMP_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
@@ -1699,7 +1787,7 @@ function paintSites(){
 const isDesk = () => window.matchMedia('(min-width: 1000px)').matches;
 function sitePhotosHTML(s){
   return photosOf(s.id).map((p, i) => '<div class="cell"><img src="' + photoURL(p) + '" data-pid="' + p.id + '" alt=""><span class="n">' +
-    (i + 1) + (hasEdit(p) ? ' ✨' : '') + (p.up && p.up.done ? ' ☁' : '') + '</span></div>').join('');
+    (i + 1) + (hasEdit(p) ? ' ✨' : '') + (p.up && p.up.done ? ' ☁' : isLost(p) ? ' ✖' : ' ⚠') + '</span></div>').join('');   // BUILD 28: ☁ online · ⚠ this phone only · ✖ lost
 }
 function mountSite(s, html){
   if(!isDesk()){ openSheet(html); return; }
@@ -1939,10 +2027,11 @@ async function openViewer(pid, siteId){
        plain, for comparing. Neither file is changed by looking at it. */
     if(showOrig){
       const o = origFile(p);
-      if(o && o.blob){ if(origURL) URL.revokeObjectURL(origURL); origURL = URL.createObjectURL(o.blob); $('#viewerImg').src = origURL; }
+      const ob = await fileBlob(o);
+      if(ob){ if(origURL) URL.revokeObjectURL(origURL); origURL = URL.createObjectURL(ob); $('#viewerImg').src = origURL; }
       return;
     }
-    if(!showing || !(screenBlob(p) || (origFile(p) || {}).blob)) return;   // BUILD 11: nothing to stamp until it is sent
+    if(!showing || !(screenBlob(p) || hasFile(origFile(p)))) return;   // BUILD 11: nothing to stamp until it is sent
     if(!stamped) stamped = await stamp(p, s);
     if(v._showing !== token || !showing) return;
     const su = URL.createObjectURL(stamped);
@@ -2200,19 +2289,20 @@ async function exportZip(sites, label, btn){
       const sp = paths.get(st.id), ph = photosOf(st.id);
       for(let i = 0; i < ph.length; i++){
         const o = origFile(ph[i]);
-        let ob = o && o.blob;
+        let ob = await fileBlob(o);
         if(!ob && ph[i].up && ph[i].up.done){ try{ ob = await fetchOriginal(ph[i]); }catch(e){ ob = null; } }   // BUILD 11: taken on another device
         if(ob) zip.file(photoPath(sp, i, ph[i]), ob, { binary: true }); else missing++;
         /* BUILD 14: your fixed copy goes out beside the original, under the NAME YOU SAVED IT AS, so the
            file in the folder and the photos list agree. */
         const ed = editFile(ph[i]);
-        if(ed && ed.blob){
+        const edb = await fileBlob(ed);
+        if(edb){
           const base = photoPath(sp, i, ph[i]);
           const name = ed.name && /edited/i.test(ed.name) ? base.replace(/[^/]+$/, ed.name)
                                                           : base.replace(/[.]([^.]+)$/, ' edited.' + fileExt(ed));
-          zip.file(name, ed.blob, { binary: true });
+          zip.file(name, edb, { binary: true });
         }
-        if(S.settings.stampCopies && (screenBlob(ph[i]) || (o && o.blob))){
+        if(S.settings.stampCopies && (screenBlob(ph[i]) || hasFile(o))){
           const stamped = await stamp(ph[i], st);
           zip.file('Stamped copies/' + sp.cat + '/' + sp.site + '/' + sp.site + ' ' + photoNum(i) + ' stamped.jpg', stamped, { binary: true });
         }
@@ -2559,6 +2649,7 @@ async function putSite(site, keys){
   if(keys && keys.length) Sync.soon();
 }
 async function putPhoto(p, keys){
+  if(!(p.up && p.up.done) && !p.deleted) setTimeout(() => Send.soon(), 0);   // BUILD 28: straight to the account
   if(keys && keys.length){
     const t = now(); p._t = p._t || {};
     for(const k of keys) p._t[k] = t;
@@ -2735,6 +2826,7 @@ const Sync = {
   start(){
     if(Sync.on || S.acct.state !== 'ok' || !FB.m) return;
     Sync.on = true;
+    Send.soon(3000);                                                   // BUILD 28
     if(!S.acct.dataOwner){ S.acct.dataOwner = S.acct.uid; saveAcct(); }   // this device's records now belong to this account
     const f = FB.m.fs;
     Sync.unsubs.push(f.onSnapshot(Sync.col('sites'),  snap => Sync.incoming('site', snap),  err => Sync.fail(err)));
@@ -2858,7 +2950,7 @@ function setLocalCats(m){
    Photo storage does not wait for signal and forgets a half-finished upload if the app closes.
    So a photo counts as sent only when Google confirms its copy at the exact size; until then it
    is simply sent again next time. Nothing is ever removed from this device. */
-const hasLocal = p => { const o = origFile(p); return !!(o && o.blob); };
+const hasLocal = p => hasFile(origFile(p));   // BUILD 28
 /* BUILD 27: read the whole file before sending it. A phone can lose the file behind a saved photo; the upload
    library reports that only as a network failure and retries it. Reading it here names the real problem at once. */
 function readable(blob){
@@ -2876,7 +2968,7 @@ function sendWhich(p){
 }
 function sendWhy(err){
   const c = err && err.code || '';
-  if(c === 'storage/retry-limit-exceeded') return 'Google could not be reached, or kept failing, for too long. Check the signal and press Send again.';
+  if(c === 'storage/retry-limit-exceeded') return 'Google could not be reached — no signal, or too weak.';
   if(c === 'storage/unauthorized') return 'Google refused it for this account (' + c + ').';
   if(c === 'storage/unauthenticated') return 'this phone is no longer signed in — sign in again under More.';
   return (err && err.message || c || 'unknown') + (c && !c.startsWith('hs/') && !(err.message || '').includes(c) ? ' (' + c + ')' : '');
@@ -2890,14 +2982,24 @@ const Send = {
   editsWaiting(p){ return editFiles(p).filter(f => !((p.up && p.up.edits) || []).some(u => u.name === f.name && u.size === f.size)).length; },
   pending(){ return [...S.all.photos.values()].filter(p => !p.deleted && (!(p.up && p.up.done) || Send.editsWaiting(p)) && hasLocal(p) &&
                      S.all.sites.has(p.siteId) && !S.all.sites.get(p.siteId).deleted); },
-  pendingBytes(){ return Send.pending().reduce((a, p) => a + ((p.up && p.up.done) ? 0 : origFile(p).blob.size + (p.display ? p.display.size : 0)) +
-    editFiles(p).filter(f => !((p.up && p.up.edits) || []).some(u => u.name === f.name && u.size === f.size)).reduce((b, f) => b + f.blob.size, 0), 0); },
+  pendingBytes(){ return Send.pending().reduce((a, p) => a + ((p.up && p.up.done) ? 0 : (origFile(p).size || 0) + (p.display ? p.display.size : 0)) +
+    editFiles(p).filter(f => !((p.up && p.up.edits) || []).some(u => u.name === f.name && u.size === f.size)).reduce((b, f) => b + (f.size || 0), 0), 0); },
+  /* BUILD 28: photos go up by themselves — after a save, on opening, on signal, and again after a failure. */
+  autoT: null, skipped: [],
+  soon(delay){
+    clearTimeout(Send.autoT);
+    Send.autoT = setTimeout(() => {
+      if(Send.running || S.acct.state !== 'ok' || !FB.m || !navigator.onLine || !Send.pending().length) return;
+      Send.run(true);
+    }, delay == null ? 1500 : delay);
+  },
 
-  async run(){
+  async run(auto){
     if(Send.running) return;
-    if(S.acct.state !== 'ok'){ toast('Sign in first — under More'); return; }
+    if(S.acct.state !== 'ok'){ if(!auto) toast('Sign in first — under More'); return; }
     const list = Send.pending();
-    if(!list.length){ toast('Every photo is already sent'); return; }
+    if(!list.length){ if(!auto) toast('Every photo is already online'); return; }
+    Send.skipped = [];
     Send.running = true; Send.cancel = false; Send.err = null; Send.done = 0; Send.total = list.length;
     Send.bytesDone = 0; Send.bytesTotal = Send.pendingBytes();
     Send.stage = ''; Send.photo = null;
@@ -2909,7 +3011,13 @@ const Send = {
       for(const p of list){
         if(Send.cancel) break;
         Send.photo = p;
-        await Send.one(p);
+        try{ await Send.one(p); }
+        catch(err){
+          if(err.code !== 'hs/unreadable') throw err;
+          const o = origFile(p); if(o) o.lost = true;                 // this session only; the stored record is left as it is
+          Send.skipped.push(p); Send.total--; paintSend(); refreshSoft();
+          continue;
+        }
         Send.done++; paintSend();
       }
     }catch(err){
@@ -2919,12 +3027,15 @@ const Send = {
       if(lock){ try{ lock.release(); }catch(e){} }
       Send.lastResult = Send.err
         ? (Send.cancel || (Send.err.code === 'storage/canceled') ? 'Stopped. ' : 'Stopped at ' + sendWhich(Send.photo) + (Send.stage ? ', while ' + Send.stage.charAt(0).toLowerCase() + Send.stage.slice(1) : '') + ': ' + sendWhy(Send.err) + ' ') +
-          Send.done + ' of ' + Send.total + ' sent — press Send again to carry on.'
+          Send.done + ' of ' + Send.total + ' sent. The rest will go by themselves when there is signal.'
         : Send.cancel ? 'Stopped. ' + Send.done + ' of ' + Send.total + ' sent — press Send again to carry on.'
-        : 'All ' + Send.done + ' photo' + (Send.done === 1 ? '' : 's') + ' sent and confirmed.' +
-          (freeableBytes() ? ' You can now free up ' + fmtBytes(freeableBytes()) + ' on this phone — More → Storage.' : '');   // BUILD 25
-      paintSend(); paintAcct(); paintSyncLine();
-      toast(Send.lastResult, 3600);
+        : '✓ ' + Send.done + ' photo' + (Send.done === 1 ? '' : 's') + ' safe in your account.';
+      if(Send.skipped.length) Send.lastResult += ' ✖ ' + Send.skipped.length + ' picture' + (Send.skipped.length === 1 ? '' : 's') + ' lost on this phone, not sent: ' +
+        Send.skipped.map(sendWhich).join('; ') + '.';
+      paintSend(); paintAcct(); paintSyncLine(); refreshSoft();
+      if(!auto || Send.err || Send.skipped.length || Send.done) toast(Send.lastResult, Send.err || Send.skipped.length ? 6000 : 3000);
+      if(Send.err && !Send.cancel) Send.soon(60000);                  // no signal or a hiccup: try again in a minute
+      else if(!Send.cancel) Send.soon();                              // photos saved while this was sending
     }
   },
 
@@ -2934,8 +3045,10 @@ const Send = {
     const up = Object.assign({ edits: [] }, p.up || {});
     if(!up.done){
       const origPath = base + 'original.' + fileExt(o), dispPath = base + 'display.jpg';
-      const om = await Send.file(origPath, o.blob, o.type || 'image/jpeg');
-      const dm = p.display ? await Send.file(dispPath, p.display, 'image/jpeg') : null;
+      const ob = await fileBlob(o); if(!ob) throw unreadable();
+      const om = await Send.file(origPath, ob, o.type || 'image/jpeg');
+      let dm = null;
+      if(p.display && !p.displayLost){ try{ dm = await Send.file(dispPath, p.display, 'image/jpeg'); }catch(err){ if(err.code !== 'hs/unreadable') throw err; } }
       up.done = true; up.at = now();
       up.orig = { path: origPath, size: +om.size };
       up.disp = dm ? { path: dispPath, size: +dm.size } : null;
@@ -2948,7 +3061,8 @@ const Send = {
       n++;
       if(up.edits.some(u => u.name === f.name && u.size === f.size)) continue;
       const path = base + 'edited-' + n + '.' + fileExt(f);
-      const m = await Send.file(path, f.blob, f.type || 'image/jpeg');
+      const fb = await fileBlob(f); if(!fb) throw unreadable();
+      const m = await Send.file(path, fb, f.type || 'image/jpeg');
       let disp = null;
       if(f.display){ const dm2 = await Send.file(base + 'edited-' + n + '-display.jpg', f.display, 'image/jpeg'); disp = { path: base + 'edited-' + n + '-display.jpg', size: +dm2.size }; }
       up.edits.push({ path: path, size: +m.size, name: f.name || '', at: f.at || now(), disp: disp });
@@ -2996,18 +3110,18 @@ const Send = {
    original back from the account. Edited versions stay on the phone. The iPhone's Photos app is never touched. */
 const Free = { running: false };
 const freeable = p => !p.deleted && !!(p.up && p.up.done && p.up.orig) && hasLocal(p) && !!p.display &&
-  (p.files || []).some(f => f.role === 'original' && f.blob) &&
-  Send.editsWaiting(p) === 0 && origFile(p).blob.size === p.up.orig.size;
+  (p.files || []).some(f => f.role === 'original' && hasFile(f)) &&
+  Send.editsWaiting(p) === 0 && origFile(p).size === p.up.orig.size;
 const freeablePhotos = () => [...S.all.photos.values()].filter(freeable);
-const freeableBytes = () => freeablePhotos().reduce((a, p) => a + origFile(p).blob.size, 0);
-const localBytes = () => S.photos.reduce((a, p) => a + (hasLocal(p) ? origFile(p).blob.size : 0), 0);   // the same photos as 'All your photos'
+const freeableBytes = () => freeablePhotos().reduce((a, p) => a + (origFile(p).size || 0), 0);
+const localBytes = () => S.photos.reduce((a, p) => a + (hasLocal(p) ? (origFile(p).size || 0) : 0), 0);   // the same photos as 'All your photos'
 
 function freeSpace(){
   if(Free.running) return;
   const list = freeablePhotos();
   if(!list.length){ toast('Nothing to free yet — photos can be removed only after Send has put them safely online', 3800); return; }
   if(S.acct.state !== 'ok' || !FB.m){ toast('Sign in, with signal — each photo is checked online before it is removed', 3800); return; }
-  const bytes = list.reduce((a, p) => a + origFile(p).blob.size, 0);
+  const bytes = list.reduce((a, p) => a + (origFile(p).size || 0), 0);
   openSheet('<h2>Free up ' + fmtBytes(bytes) + '?</h2>' +
     '<p class="hint">' + list.length + ' photo' + (list.length === 1 ? ' is' : 's are') + ' safely in your account. Their full-size files will be removed from this phone one at a time — each only after Google confirms its online copy is there and complete.</p>' +
     '<ul class="bi-report">' +
@@ -3031,9 +3145,9 @@ function freeSpace(){
           if(!freeable(p)){ kept++; continue; }                         // something changed meanwhile
           const md = await st.getMetadata(st.ref(FB.st, p.up.orig.path));
           const o = (p.files || []).find(f => f.role === 'original');
-          if(!o || !o.blob || +md.size !== o.blob.size){ kept++; why = why || 'an online copy was not the right size'; continue; }
-          const size = o.blob.size;
-          o.blob = null; o.freed = now();
+          if(!o || !hasFile(o) || +md.size !== o.size){ kept++; why = why || 'an online copy was not the right size'; continue; }
+          const size = o.size;
+          o.blob = null; o.freed = now();                              // BUILD 28: putPhotoRecord removes the bytes
           await putPhoto(p);                                           // this device only: photo files never go online with the record
           freed++; bytesFreed += size;
         }catch(err){ kept++; why = why || (err.code === 'storage/object-not-found' ? 'an online copy was missing' : 'no signal or no answer'); }
@@ -3057,7 +3171,7 @@ async function fetchDisplay(p){
   try{
     const last = ((p.up.edits || [])[((p.up.edits || []).length - 1)] || null);   // BUILD 14: the newest edit is what should show
     const st = FB.m.st, path = ((last && (last.disp || last)) || p.up.disp || p.up.orig).path;
-    p.display = await st.getBlob(st.ref(FB.st, path));
+    p.display = await st.getBlob(st.ref(FB.st, path)); delete p.displayLost;
     await dbPut('photos', p);
     const u = S.urls.get(p.id); if(u){ URL.revokeObjectURL(u); S.urls.delete(p.id); }
     refreshSoft();
@@ -3091,11 +3205,11 @@ function paintSyncLine(){
     else if(Sync.pushing || d) t = '↻ Backing up…';
     else if(Sync.err) { t = '⚠ Couldn’t reach your account just now — your records are safe here and will go up shortly.'; warn = true; }
     else t = '☁ Records backed up.';
-    if(pend) t += ' · ' + pend + ' photo' + (pend === 1 ? '' : 's') + ' to Send.';
+    if(pend){ t += ' ⚠ ' + pend + ' photo' + (pend === 1 ? '' : 's') + ' on this phone only' + (Send.running ? ' — sending now.' : navigator.onLine ? ' — will send shortly.' : ' — will send when there is signal.'); warn = true; }
   }
   el.hidden = !t; el.textContent = t; el.classList.toggle('warn', warn);
 }
-window.addEventListener('online',  () => { paintSyncLine(); if(S.acct.mode === 'account' && S.acct.state !== 'ok' && Acct.user()) Acct.evaluate(Acct.user()); else Sync.soon(); });
+window.addEventListener('online',  () => { paintSyncLine(); Send.soon(3000); if(S.acct.mode === 'account' && S.acct.state !== 'ok' && Acct.user()) Acct.evaluate(Acct.user()); else Sync.soon(); });
 window.addEventListener('offline', paintSyncLine);
 
 /* ---------- the sign-in page ----------
@@ -3200,11 +3314,13 @@ function paintAcct(){
     h = '<div class="kv"><span class="k">Signed in as</span><span class="v">' + em + '</span></div>' +
         '<div class="kv"><span class="k">Records</span><span class="v">' + rec + '</span></div>' +
         '<div class="kv" style="border:0"><span class="k">Photos online</span><span class="v">' + sent + ' of ' + all + '</span></div>' +
+        (S.photos.filter(isLost).length ? '<p class="formmsg bad" style="margin:6px 0 0">✖ ' + S.photos.filter(isLost).length + ' picture' + (S.photos.filter(isLost).length === 1 ? ' was' : 's were') + ' lost on this phone before reaching your account. Their records are kept.</p>' : '') +
+        (sent ? '<button class="btn full" id="acCloud" style="margin-top:10px">🖼 Photos in my account</button>' : '') +
         (pend
-          ? '<button class="btn pri full" id="acSend" style="margin-top:10px">📤 Send ' + pend + ' photo' + (pend === 1 ? '' : 's') + ' · ' + fmtBytes(Send.pendingBytes()) + '</button>'
-          : '<p class="hint" style="margin:10px 0 0">Every photo on this device is sent.</p>') +
+          ? '<button class="btn pri full" id="acSend" style="margin-top:10px">📤 Send ' + pend + ' photo' + (pend === 1 ? '' : 's') + ' now · ' + fmtBytes(Send.pendingBytes()) + '</button>'
+          : '<p class="hint" style="margin:10px 0 0">Every photo on this device is in your account.</p>') +
         '<div id="sendBox"></div>' +
-        '<p class="hint" style="margin:10px 0 0">Send on Wi-Fi — photos are large. Keep History Scout open until it finishes: iPhones stop web apps sending in the background. Your photos stay on this device too.</p>' +
+        '<p class="hint" style="margin:10px 0 0">Photos go to your account by themselves whenever there is signal. iPhones pause this while History Scout is closed; it carries on when you open it.</p>' +
         trash +
         (a.admin ? '<button class="btn full" id="acAdmin" style="margin-top:8px">👥 Access requests</button>' : '') +
         '<button class="btn full" id="acOut" style="margin-top:8px">Sign out</button>';
@@ -3212,7 +3328,7 @@ function paintAcct(){
   box.innerHTML = h;
   const on = (id, fn) => { const el = $('#' + id); if(el) el.onclick = fn; };
   on('acIn', openSignIn); on('acReq', openRequest); on('acTrash', openTrash); on('acAdmin', openRequests);
-  on('acSend', () => Send.run());
+  on('acSend', () => Send.run()); on('acCloud', openCloudPhotos);
   on('acRecheck', async () => { toast('Checking…'); try{ await Acct.recheck(); }catch(err){ toast(authError(err), 3200); } paintSyncLine(); });
   on('acResend', async () => { try{ await Acct.resendConfirm(); toast('Sent — check your email', 3000); }catch(err){ toast(authError(err), 3200); } });
   on('acOut', () => {
@@ -3223,6 +3339,27 @@ function paintAcct(){
     $('#soYes').onclick = async () => { await Acct.signOut(); closeSheet(); paintSyncLine(); toast('Signed out'); };
   });
   paintSend();
+}
+
+/* ---------- BUILD 28: Photos in my account ----------
+   Every picture here is loaded from the account online, never from this device — what shows is what is stored there. */
+function openCloudPhotos(){
+  if(S.acct.state !== 'ok' || !FB.m){ toast('Sign in, with signal, to see your account', 3000); return; }
+  const sent = [...S.all.photos.values()].filter(p => !p.deleted && p.up && p.up.done && p.up.orig && S.all.sites.has(p.siteId) && !S.all.sites.get(p.siteId).deleted);
+  const bySite = new Map();
+  for(const p of sent){ if(!bySite.has(p.siteId)) bySite.set(p.siteId, []); bySite.get(p.siteId).push(p); }
+  let h = '<h2>Photos in my account</h2><p class="hint" style="margin:-4px 0 12px">' + sent.length + ' photo' + (sent.length === 1 ? '' : 's') + ', each loaded from your account online.</p>';
+  for(const [sid, ph] of [...bySite.entries()].sort((a, b) => (S.all.sites.get(b[0]).created || 0) - (S.all.sites.get(a[0]).created || 0))){
+    h += '<div class="sec-h">' + esc(S.all.sites.get(sid).name) + '</div><div class="pgrid" style="margin-bottom:12px">' +
+      ph.sort((a, b) => a.takenAt - b.takenAt).map(p => '<div class="cell"><img data-cloud="' + esc((p.up.disp || p.up.orig).path) + '" src="' + PH_LOAD + '" alt=""></div>').join('') + '</div>';
+  }
+  h += '<button class="btn full" id="cloudDone">Done</button>';
+  openSheet(h);
+  $('#cloudDone').onclick = closeSheet;
+  const st = FB.m.st;
+  $$('img[data-cloud]').forEach(im => st.getDownloadURL(st.ref(FB.st, im.dataset.cloud))
+    .then(u => { im.src = u; })
+    .catch(() => { im.src = phSVG('Not in', 'account'); }));
 }
 
 /* ---------- Send's progress ---------- */
@@ -3504,7 +3641,7 @@ async function bringInNew(btn, opts){
            ones whose file is not in THIS folder — so it fills a new folder without ever duplicating. */
         if(p.broughtIn && (!opts.all || await biFiled(roots.photos, p.broughtIn.path))){ already++; continue; }
         const o = origFile(p);
-        let blob = o && o.blob;
+        let blob = await fileBlob(o);
         if(!blob && p.up && p.up.done){
           if(btn) btn.textContent = '⏳ fetching a photo from your account…';
           try{ blob = await fetchOriginal(p); }catch(err){ blob = null; BI.problems.push('Could not fetch a photo of ' + st.name + ' from your account: ' + (err.message || err.code)); }
@@ -3892,7 +4029,7 @@ function checkForUpdate(){
     })
     .catch(()=>{});
 }
-document.addEventListener('visibilitychange', () => { if(!document.hidden) checkForUpdate(); });
+document.addEventListener('visibilitychange', () => { if(!document.hidden){ checkForUpdate(); Send.soon(2000); } });
 /* pageshow fires when iOS wakes a suspended home-screen app without reloading it,
    which is the usual way it gets reopened — visibilitychange alone can miss it. */
 window.addEventListener('pageshow', () => setTimeout(checkForUpdate, 800));
