@@ -163,6 +163,13 @@ body.lefty #btnLib{order:2} body.lefty #btnCam{order:1}
 }
 .cat .ic{font-size:27px;line-height:1}
 .cat.on{border-color:var(--accent);background:#F2E2BC}
+/* BUILD 21: the Unsorted pile */
+.sortline{display:block;width:100%;text-align:left;margin:-4px 0 14px;padding:12px 14px;min-height:48px;border-radius:12px;
+  background:#F3E3B8;border:1px solid #C9A04A;color:var(--ink);font-size:16px;font-weight:650}
+.sortcard{background:#F3E3B8;border:1px solid #C9A04A;border-radius:14px;padding:13px;margin:0 0 14px}
+.sortcard .t{font-size:17px;font-weight:750;margin:0 0 4px}
+.sortcard .d{font-size:15px;color:var(--ink2);margin:0 0 10px}
+.chip.unsorted{border-color:#C9A04A;background:#F3E3B8;font-weight:750}
 
 /* ---------- forms ---------- */
 label.f{display:block;margin-bottom:11px}
@@ -386,6 +393,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
         <button id="recNew">＋ New</button>
       </div>
       <p class="syncline" id="syncLine" hidden></p>
+      <button class="sortline" id="sortLine" hidden></button>
 
       <div class="card lastshot" id="lastShot" hidden>
         <h3>Your last photo</h3>
@@ -405,7 +413,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       </div>
 
       <p class="hint" style="text-align:center;margin:16px 4px 0">
-        Capture fast in the field — one tap, one category.<br>Fill in the details later at the kitchen table.
+        Capture fast in the field — one tap, nothing to answer.<br>Sort and fill in the details later at the kitchen table.
       </p>
       </div>
 
@@ -621,7 +629,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 20;
+const BUILD = 21;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -834,7 +842,13 @@ const S = {
   settings: {fullSize:true, stampCopies:false, stampView:true, grouping:true, groupRadius:274, recordedBy:'', hand:'right', sticky:{}, settingsV:2},
   urls: new Map()            // photoId -> objectURL cache
 };
-const catById = id => S.cats.find(c=>c.id===id) || {id:'other', name:'Other', ic:'📍', color:'#7A8288'};
+/* BUILD 21: photos from a new place wait here until they are sorted. It is never one of the categories you pick
+   from, never filed by Bring in new and never exported — just a holding place. */
+const UNSORTED = 'unsorted';
+const UNSORTED_CAT = {id:UNSORTED, name:'Unsorted', ic:'📥', color:'#8A5A00'};
+const isUnsorted = s => !!s && s.category === UNSORTED;
+const sortedSites = () => S.sites.filter(s => !isUnsorted(s));
+const catById = id => id === UNSORTED ? UNSORTED_CAT : (S.cats.find(c=>c.id===id) || {id:'other', name:'Other', ic:'📍', color:'#7A8288'});
 
 /* BUILD 9 photo records hold a LIST of files — the original now, an edited version and a RAW
    file later — plus a small copy made only for the screen. Records saved by earlier builds had
@@ -1351,7 +1365,7 @@ async function intake(files, input){
     for(const f of files) recs.push(await processPhoto(f, !!input && input.id === 'fileLib'));
     if(input) input.value = '';
     recs.from = (input && input.id === 'fileCam') ? 'camera' : 'library';
-    routeRecs(recs);
+    await routeRecs(recs);
   }catch(err){
     console.error(err);
     toast('Could not read that photo');
@@ -1365,29 +1379,34 @@ async function intake(files, input){
 const currentSite = () => S.sites.find(s => s.id === S.currentSiteId) || null;
 const groupRadius = () => S.settings.groupRadius || 274;
 
-function routeRecs(recs){
-  const p0 = recs[0];
-
-  // you asked for a new one, grouping is off, or there is no position to judge by
-  if(S.forceNew || !S.settings.grouping || p0.lat == null){
+/* BUILD 21 — the Unsorted pile. Nothing is asked after a shot any more. Each photo joins the place you are working
+   on, or a place already recorded nearby; anywhere new starts a place in Unsorted, sorted later at the table.
+   Photos picked from the library are placed one at a time by their own positions, so several picked together no
+   longer all follow wherever the first one belongs. */
+async function routeRecs(recs){
+  const went = new Map();                                     // site id -> photos added
+  const add = (id, n) => went.set(id, (went.get(id) || 0) + n);
+  if(S.forceNew || !S.settings.grouping){
+    // you pressed + New, or grouping is off: this batch starts one new place together
     S.forceNew = false;
-    openCategoryPicker(recs);
-    return;
+    const s = await createSite(UNSORTED, '', recs, true);
+    add(s.id, recs.length);
+  } else {
+    for(const r of recs){
+      const cur = currentSite();
+      let dest = null;
+      if(r.lat == null) dest = cur ? cur.id : null;           // no position to judge by: where the bar says
+      else if(cur && cur.lat != null && haversine(r.lat, r.lon, cur.lat, cur.lon) <= groupRadius()) dest = cur.id;
+      else { const n = nearestSite(r.lat, r.lon); if(n && n.d <= groupRadius()) dest = n.site.id; }
+      if(dest){ await attachTo(dest, [r], true); add(dest, 1); }
+      else { const s = await createSite(UNSORTED, '', [r], true); add(s.id, 1); }
+    }
   }
-  // still at the place you were already working
-  const cur = currentSite();
-  if(cur && cur.lat != null && haversine(p0.lat, p0.lon, cur.lat, cur.lon) <= groupRadius()){
-    attachTo(cur.id, recs);
-    return;
-  }
-  // you have wandered back to somewhere already recorded
-  const n = nearestSite(p0.lat, p0.lon);
-  if(n && n.d <= groupRadius()){
-    attachTo(n.site.id, recs);
-    return;
-  }
-  // somewhere new
-  openCategoryPicker(recs);
+  refreshAll(); paintRecBar();
+  const sites = [...went.keys()].map(id => S.sites.find(x => x.id === id)).filter(Boolean);
+  const newUnsorted = sites.filter(isUnsorted).length;
+  if(recs.length === 1 && sites[0]) toast(isUnsorted(sites[0]) ? '📥 Saved to Unsorted — ' + sites[0].name : 'Added to ' + sites[0].name);
+  else toast(recs.length + ' photos saved' + (newUnsorted ? ' — ' + newUnsorted + ' place' + (newUnsorted === 1 ? '' : 's') + ' in Unsorted' : ''), 3200);
 }
 
 /* ---------- the bar that says where photos are going ---------- */
@@ -1425,47 +1444,7 @@ $('#recNew').onclick    = () => {
   toast('The next photo will start a new site');
 };
 $('#stHdgCard').onclick = openCompassSheet;
-
-function openCategoryPicker(recs){
-  /* Show the photo just taken, big, while the category is picked — a blurry one can be retaken
-     before it is ever saved. */
-  const first = recs[0] || {};
-  const shotURL = first.display ? URL.createObjectURL(first.display) : '';
-  const fromCam = recs.from === 'camera';
-  const shot = !shotURL ? '' : ('<img class="pick-shot" src="' + shotURL + '" alt="The photo you just took">' +
-    '<div class="pick-row"><span class="hint">' + (recs.length > 1 ? recs.length + ' photos. ' : '') +
-    (fromCam ? 'Blurry? Take it again before saving.' : 'Wrong one? Choose again.') + '</span>' +
-    '<button class="btn" id="capRetake">' + (fromCam ? '📷 Retake' : '🖼 Choose again') + '</button></div>');
-  const tiles = S.cats.map(c=>`<button class="cat" data-c="${c.id}"><span class="ic">${c.ic}</span>${esc(c.name)}</button>`).join('');
-  openSheet(`
-    ${shot}
-    <h2>What is it?</h2>
-    <p class="hint" style="margin:-4px 0 13px">One tap. Everything else can wait until tonight.</p>
-    <div class="cats">${tiles}</div>
-    <label class="f" style="margin-top:16px"><span>Site name (optional)</span>
-      <input type="text" id="capName" placeholder="auto-named if you leave it blank"></label>
-    <button class="btn pri full" id="capSave" style="margin-top:4px">💾 Save Site</button>
-  `);
-  let chosen = null;
-  const retake = $('#capRetake');
-  if(retake) retake.onclick = () => {
-    (fromCam ? $('#fileCam') : $('#fileLib')).click();   // first, while the tap still counts
-    closeSheet();
-    if(shotURL) URL.revokeObjectURL(shotURL);
-    toast(fromCam ? 'Not saved — take it again' : 'Not saved — choose again');
-  };
-  $$('#sheetcontent .cat').forEach(b => b.onclick = () => {
-    $$('#sheetcontent .cat').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on'); chosen = b.dataset.c;
-  });
-  $('#capSave').onclick = async () => {
-    if(!chosen){ toast('Pick a category first'); return; }
-    const nm = $('#capName').value.trim();
-    closeSheet();
-    await createSite(chosen, nm, recs);
-    if(shotURL) URL.revokeObjectURL(shotURL);
-  };
-}
+$('#sortLine').onclick = openUnsorted;
 
 /* "Cemeteries" -> "Cemetery", "Old Churches" -> "Church". Chopping a trailing
    's' gave "Cemeterie" and "Churche". Custom categories go through this too. */
@@ -1486,7 +1465,7 @@ function autoName(catId){
   return base + ' ' + n;
 }
 
-async function createSite(catId, name, recs){
+async function createSite(catId, name, recs, quiet){
   const p0 = recs.find(r=>r.lat!=null) || recs[0];
   const site = {
     id: uid(),
@@ -1503,17 +1482,16 @@ async function createSite(catId, name, recs){
   await putSite(site, keysOf('site', site));
   for(const r of recs){ r.siteId = site.id; await putPhoto(r, keysOf('photo', r)); }
   S.currentSiteId = site.id; S.forceNew = false;
-  refreshAll(); paintRecBar();
-  toast(`Saved — ${site.name}`);
+  if(!quiet){ refreshAll(); paintRecBar(); toast(`Saved — ${site.name}`); }
+  return site;
 }
 
-async function attachTo(siteId, recs){
+async function attachTo(siteId, recs, quiet){
   for(const r of recs){ r.siteId = siteId; await putPhoto(r, keysOf('photo', r)); }
   const s = S.sites.find(x=>x.id===siteId);
   if(s){ s.updated = Date.now(); await putSite(s); }
   S.currentSiteId = siteId; S.forceNew = false;
-  refreshAll(); paintRecBar();
-  toast(`Added ${recs.length} photo${recs.length>1?'s':''} to ${s ? s.name : 'the site'}`);
+  if(!quiet){ refreshAll(); paintRecBar(); toast(`Added ${recs.length} photo${recs.length>1?'s':''} to ${s ? s.name : 'the site'}`); }
 }
 
 /* ======================================================================
@@ -1625,6 +1603,8 @@ function paintFilters(){
   const counts = {};
   S.sites.forEach(s => counts[s.category] = (counts[s.category]||0)+1);
   let h = `<button class="chip ${S.filter==='all'?'on':''}" data-f="all">All ${S.sites.length}</button>`;
+  if(counts[UNSORTED]) h += `<button class="chip unsorted ${S.filter===UNSORTED?'on':''}" data-f="${UNSORTED}">📥 Unsorted ${counts[UNSORTED]}</button>`;
+  else if(S.filter === UNSORTED) S.filter = 'all';          // nothing left to sort: back to everything
   for(const c of S.cats){
     if(!counts[c.id]) continue;
     h += `<button class="chip ${S.filter===c.id?'on':''}" data-f="${c.id}">${c.ic} ${counts[c.id]}</button>`;
@@ -1634,7 +1614,8 @@ function paintFilters(){
 }
 
 function paintSites(){
-  const list = S.filter==='all' ? S.sites : S.sites.filter(s=>s.category===S.filter);
+  const pick = S.filter==='all' ? S.sites : S.sites.filter(s=>s.category===S.filter);
+  const list = [...pick.filter(isUnsorted), ...pick.filter(s => !isUnsorted(s))];   // BUILD 21: what needs sorting first
   if(!list.length){
     $('#siteList').innerHTML = `<div class="empty"><span class="ic">🗂</span>
       ${S.sites.length ? 'Nothing in this category yet.' : 'No sites yet.<br>Head to the Capture tab and photograph something old.'}</div>`;
@@ -1653,7 +1634,7 @@ function paintSites(){
         <div class="ln">${esc(c.name)}${s.fields.condition?' · '+esc(s.fields.condition):''}</div>
         <div class="ln2">${ph.length} photo${ph.length===1?'':'s'} · ${new Date(s.created).toLocaleDateString()}${d!=null?' · '+fmtDist(d)+' away':''}</div>
       </div>
-      <span class="pill">${esc(s.fields.status||'Draft')}</span>
+      <span class="pill">${isUnsorted(s) ? 'To sort' : esc(s.fields.status||'Draft')}</span>
     </button>`;
   }).join('');
   $$('#siteList .site').forEach(b => b.onclick = () => openSite(b.dataset.id));
@@ -1724,9 +1705,16 @@ function openSite(id){
   const before = JSON.parse(JSON.stringify(s));   // what the form started from: only what YOU change is saved
   const html = (`
     <h2>${c.ic} <span id="siteTitle">${esc(s.name)}</span></h2>
+    ${isUnsorted(s) ? `<div class="sortcard" id="sortCard">
+      <div class="t">📥 Not sorted yet — what is it?</div>
+      <div class="d">One tap, and a name if you like. It then files like any other site.</div>
+      <div class="cats">${S.cats.map(x => `<button class="cat" data-c="${x.id}"><span class="ic">${x.ic}</span>${esc(x.name)}</button>`).join('')}</div>
+      <label class="f" style="margin-top:12px"><span>Name (optional)</span><input type="text" id="sortName" maxlength="255" placeholder="named for you if you leave it blank"></label>
+      <button class="btn pri full" id="sortSave">✅ Sort it</button>
+    </div>` : ''}
 
     <label class="f"><span>Name of feature</span><input type="text" id="f_name" maxlength="255" value="${esc(s.name)}"></label>
-    <label class="f"><span>Category</span><select id="f_cat">${
+    <label class="f"><span>Category</span><select id="f_cat">${isUnsorted(s) ? `<option value="${UNSORTED}" selected>📥 Unsorted</option>` : ''}${
       S.cats.map(x=>`<option value="${x.id}" ${x.id===s.category?'selected':''}>${x.ic} ${esc(x.name)}</option>`).join('')}</select></label>
 
     <div class="sens"><div><div class="t">🔒 Sensitive location</div><div class="d">Its position is left off stamped copies, and exports mark it private. For archaeological sites and graves that could be disturbed.</div></div><div class="tg ${s.sensitive?'on':''}" id="f_sens" role="switch" aria-label="Sensitive location"></div></div>
@@ -1826,6 +1814,27 @@ function openSite(id){
     refreshAll(); closeSheet(); toast(keys.length ? 'Saved' : 'Nothing had changed');
     if(desk) openSite(s.id);
   };
+
+  /* BUILD 21: sorting an Unsorted place. An automatic "Unsorted N" name becomes "Church 3"; a name you gave it stays. */
+  if(isUnsorted(s)){
+    let pickedCat = null;
+    $$(R + ' #sortCard .cat').forEach(b => b.onclick = () => {
+      $$(R + ' #sortCard .cat').forEach(x => x.classList.remove('on'));
+      b.classList.add('on'); pickedCat = b.dataset.c;
+    });
+    $('#sortSave').onclick = async () => {
+      if(!pickedCat){ toast('Tap what it is first'); return; }
+      const typed = $('#sortName').value.trim();
+      const keys = ['category'];
+      s.category = pickedCat;
+      const newName = typed || (/^Unsorted \d+$/.test(s.name || '') ? autoName(pickedCat) : '');
+      if(newName && newName !== s.name){ s.name = newName; keys.push('name'); }
+      await putSite(s, keys);
+      refreshAll(); closeSheet();
+      toast('Sorted — ' + s.name);
+      if(desk) openSite(s.id);
+    };
+  }
 
   $('#mapSite').onclick = () => { closeSheet(); showView('map'); setTimeout(()=>focusSite(s), 260); };
   $('#expSite').onclick = () => exportZip([s], s.name, $('#expSite'));
@@ -2191,7 +2200,11 @@ function exportReadme(nSites, nPhotos, reduced, missing, nSensitive, hasOwners){
   return lines.filter(l => l !== null).join('\r\n') + '\r\n';
 }
 
-$('#btnExportZip').onclick = () => exportZip([...S.sites].sort((a, b) => a.created - b.created), 'all sites', $('#btnExportZip'));
+$('#btnExportZip').onclick = () => {
+  const n = S.sites.filter(isUnsorted).length;
+  if(n) toast(n + ' place' + (n === 1 ? '' : 's') + ' in Unsorted left out — sort ' + (n === 1 ? 'it' : 'them') + ' first', 3200);
+  exportZip(sortedSites().sort((a, b) => a.created - b.created), 'all sites', $('#btnExportZip'));
+};
 
 /* ======================================================================
    SETTINGS / CATEGORIES / STORAGE / DIAGNOSTICS
@@ -3281,10 +3294,11 @@ function biPending(){
   let photos = 0, waiting = 0;
   for(const p of S.photos){
     if(p.broughtIn) continue;
+    if(isUnsorted(S.sites.find(s => s.id === p.siteId))) continue;              // BUILD 21: waits in Unsorted
     if(hasLocal(p) || (p.up && p.up.done)) photos++; else waiting++;
   }
-  const fresh = S.sites.filter(s => !s.broughtIn).length;
-  const changed = S.sites.filter(s => s.broughtIn && recUpdated(s) > (s.broughtIn.listed || 0)).length;
+  const fresh = sortedSites().filter(s => !s.broughtIn).length;
+  const changed = sortedSites().filter(s => s.broughtIn && recUpdated(s) > (s.broughtIn.listed || 0)).length;
   return { photos: photos, waiting: waiting, fresh: fresh, changed: changed };
 }
 
@@ -3314,7 +3328,7 @@ async function bringInNew(btn, opts){
   let filed = 0, already = 0, waiting = 0, newRows = [], changedRows = [], filedRows = [], wrote = [];
   try{
     const paths = sitePaths();
-    for(const st of [...S.sites].sort((a, b) => a.created - b.created)){
+    for(const st of sortedSites().sort((a, b) => a.created - b.created)){          // BUILD 21: Unsorted waits
       const sp = paths.get(st.id), ph = photosOf(st.id);
       let dir = null;
       for(let i = 0; i < ph.length; i++){
@@ -3346,16 +3360,16 @@ async function bringInNew(btn, opts){
     const recs = roots.records;
     /* Filling a fresh folder: it needs a list of everything in it, not only what happens to be new —
        the sites were listed into the folder that was used before. */
-    if(opts.all && S.sites.length && (filed > 0 || !(await biHas(recs, 'all-sites ' + stamp + '.csv')))){
+    if(opts.all && sortedSites().length && (filed > 0 || !(await biHas(recs, 'all-sites ' + stamp + '.csv')))){
       const nm = await biFreeFile(recs, 'all-sites ' + stamp, 'csv');
-      await biWrite(recs, nm, new Blob([csvSites([...S.sites])], { type: 'text/csv' }));
+      await biWrite(recs, nm, new Blob([csvSites(sortedSites())], { type: 'text/csv' }));
       wrote.push(nm + ' — every site you have, for a folder starting from scratch');
-      if(S.sites.some(x => x.lat != null)){
+      if(sortedSites().some(x => x.lat != null)){
         const gj = await biFreeFile(recs, 'all-sites ' + stamp, 'geojson');
-        await biWrite(recs, gj, new Blob([geojson([...S.sites])], { type: 'application/geo+json' }));
+        await biWrite(recs, gj, new Blob([geojson(sortedSites())], { type: 'application/geo+json' }));
         wrote.push(gj + ' — the same sites with their positions built in');
       }
-      for(const st of S.sites){ st.broughtIn = { at: now(), listed: recUpdated(st) }; await dbPut('sites', st); }
+      for(const st of sortedSites()){ st.broughtIn = { at: now(), listed: recUpdated(st) }; await dbPut('sites', st); }
       newRows = []; changedRows = [];
     }
     if(newRows.length){
@@ -3389,7 +3403,8 @@ async function bringInNew(btn, opts){
     BI.running = false;
     if(btn) btn.textContent = old;
   }
-  biReport({ filed: filed, already: already, waiting: waiting, wrote: wrote, sites: newRows.length,
+  const holding = S.sites.filter(isUnsorted).reduce((a, s) => a + photosOf(s.id).length, 0);
+  biReport({ filed: filed, already: already, waiting: waiting, unsorted: holding, wrote: wrote, sites: newRows.length,
              changed: changedRows.length, photosName: roots.photosName, recordsName: roots.recordsName });
   paintPC();
 }
@@ -3401,6 +3416,7 @@ function biReport(r){
   else li.push('<li>No new or changed sites to list, so no list was written.</li>');
   if(r.already) li.push('<li>' + r.already + ' photo' + (r.already === 1 ? ' was' : 's were') + ' already there, and left alone.</li>');
   if(r.waiting) li.push('<li>' + r.waiting + ' photo' + (r.waiting === 1 ? ' is' : 's are') + ' still only on the phone — press <b>Send</b> there, then bring in again.</li>');
+  if(r.unsorted) li.push('<li>' + r.unsorted + ' photo' + (r.unsorted === 1 ? ' is' : 's are') + ' waiting in <b>📥 Unsorted</b> and ' + (r.unsorted === 1 ? 'was' : 'were') + ' left out. Sort ' + (r.unsorted === 1 ? 'it' : 'them') + ', then bring in again.</li>');
   for(const p of BI.problems) li.push('<li class="warn">' + esc(p) + '</li>');
   BI.result = r.filed + ' photo' + (r.filed === 1 ? '' : 's') + ' filed' + (r.sites ? ', ' + r.sites + ' new site' + (r.sites === 1 ? '' : 's') + ' listed' : '') + (r.changed ? ', ' + r.changed + ' changed' : '');
   openSheet('<h2>Brought in</h2><ul class="bi-report">' + li.join('') + '</ul>' +
@@ -3412,7 +3428,7 @@ function biReport(r){
 /* Safari, Firefox, and phones cannot write into folders: one ZIP per site instead, with the same
    "only what's new" memory, so the same site is not downloaded twice. */
 async function biDownloadNew(btn){
-  const fresh = S.sites.filter(s => !s.broughtIn);
+  const fresh = sortedSites().filter(s => !s.broughtIn);
   if(!fresh.length){ toast('Nothing new to bring in'); return; }
   for(const st of fresh){
     await exportZip([st], st.name, btn);
@@ -3543,7 +3559,7 @@ async function biFindEdits(btn){
   const problems = [], names = [];
   try{
     const paths = sitePaths();
-    for(const st of [...S.sites].sort((a, b) => a.created - b.created)){
+    for(const st of sortedSites().sort((a, b) => a.created - b.created)){          // BUILD 21: Unsorted has no folder yet
       const sp = paths.get(st.id), ph = photosOf(st.id);
       let dir = null;
       try{ dir = await (await roots.photos.getDirectoryHandle(sp.cat)).getDirectoryHandle(sp.site); }
@@ -3589,6 +3605,17 @@ async function biFindEdits(btn){
 /* ======================================================================
    BOOT
    ====================================================================== */
+/* BUILD 21: says on the Capture screen how many places are waiting in Unsorted; a tap opens them. */
+function paintSortLine(){
+  const el = $('#sortLine'); if(!el) return;
+  const waiting = S.sites.filter(isUnsorted), n = waiting.length;
+  el.hidden = !n;
+  if(!n) return;
+  const ph = waiting.reduce((a, s) => a + photosOf(s.id).length, 0);
+  el.textContent = '📥 ' + n + ' place' + (n === 1 ? '' : 's') + ' in Unsorted (' + ph + ' photo' + (ph === 1 ? '' : 's') + ') — tap to sort';
+}
+function openUnsorted(){ S.filter = UNSORTED; showView('sites'); paintFilters(); paintSites(); }
+
 function refreshAll(){
   paintFilters(); paintSites(); paintStorage(); paintCats();
   if(map) paintMap();
@@ -3596,6 +3623,7 @@ function refreshAll(){
   paintLastShot();
   paintSyncLine();
   if($('#v-more').classList.contains('on')){ paintAcct(); paintPC(); }
+  paintSortLine();
   $('#kSites').textContent  = S.sites.length;
   $('#kPhotos').textContent = S.photos.length;
 }
