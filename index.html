@@ -119,8 +119,10 @@ button{background:none;border:0;cursor:pointer}
 #v-capture.on{display:flex;flex-direction:column;padding:0;overflow:hidden}
 #v-capture .cap-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 24px}
 #v-capture .cap-row{flex:0 0 auto;margin:0;padding:10px 14px 12px;background:var(--bg2);border-top:1px solid var(--line)}
-#btnLib{order:1} #btnCam{order:2}
-body.lefty #btnLib{order:2} body.lefty #btnCam{order:1}
+/* BUILD 24: From Library is the main button, so it takes the thumb side; Capture Site sits beside it. */
+#btnCam{order:1} #btnLib{order:2}
+body.lefty #btnCam{order:2} body.lefty #btnLib{order:1}
+.bigbtn small{display:block;font-size:14px;font-weight:600;opacity:.88;letter-spacing:0}
 @media (orientation: landscape) and (max-height: 540px){
   #v-capture.on{flex-direction:row}
   body.lefty #v-capture.on{flex-direction:row-reverse}
@@ -130,7 +132,7 @@ body.lefty #btnLib{order:2} body.lefty #btnCam{order:1}
     padding:10px 10px 10px calc(10px + env(safe-area-inset-left,0px))}
   #v-capture .cap-row .bigbtn{flex:1 1 auto;justify-content:center;padding:10px 8px}
   #v-capture .cap-row .bigbtn.sec{flex:0 0 auto}
-  body.lefty #btnLib{order:1} body.lefty #btnCam{order:2}   /* Capture low in the column, under the thumb, either hand */
+  #btnCam, body.lefty #btnCam{order:1} #btnLib, body.lefty #btnLib{order:2}   /* From Library low in the column, under the thumb */
 }
 
 .card{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:12px}
@@ -414,14 +416,14 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       </div>
 
       <p class="hint" style="text-align:center;margin:16px 4px 0">
-        Capture fast in the field — one tap, nothing to answer.<br>Sort and fill in the details later at the kitchen table.
+        Photograph with your iPhone camera, then tap From Library.<br>Sort and fill in the details later at the kitchen table.
       </p>
       </div>
 
       <!-- BUILD 19: outside the scrolling part, so it is always on screen -->
       <div class="cap-row">
-        <button class="bigbtn" id="btnCam"><span class="ic">📷</span>Capture Site</button>
-        <button class="bigbtn sec" id="btnLib"><span class="ic">🖼</span>From<br>Library</button>
+        <button class="bigbtn sec" id="btnCam"><span class="ic">📷</span>Capture Site<small>quick shot</small></button>
+        <button class="bigbtn" id="btnLib"><span class="ic">🖼</span>From Library<small>full size, with location</small></button>
       </div>
     </div>
 
@@ -498,7 +500,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
             <option value="402">a quarter mile — a farm</option>
           </select>
         </label>
-        <label class="f" style="margin:12px 0 0"><span>Capture button on the</span>
+        <label class="f" style="margin:12px 0 0"><span>Big button on the</span>
           <select id="setHand">
             <option value="right">Right — I hold the phone in my right hand</option>
             <option value="left">Left — I hold the phone in my left hand</option>
@@ -630,7 +632,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 23;
+const BUILD = 24;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -1154,6 +1156,11 @@ async function scaledJPEG(img, maxEdge, quality){
 
 /* "2026:09:14 10:22:33" — the camera's own clock, read in the phone's time zone. */
 /* BUILD 19: the stored codes stay as they are (the CSV and ArcGIS read them); people read these. */
+/* BUILD 24: what kind of file the phone handed over — it matters for Photoshop and ArcGIS on the PC. */
+function fileKind(p){
+  const t = String(((origFile(p) || p.origMeta || {}).type) || '').toLowerCase();
+  return /jpe?g/.test(t) ? 'JPEG' : /hei[cf]/.test(t) ? 'HEIC' : /png/.test(t) ? 'PNG' : (t || 'not known');
+}
 function gpsWords(s){
   return ({ 'live fix at capture': "Your phone's GPS, as the photo was saved",
             'live fix at import':  "Your phone's GPS when it was brought in — taken minutes before",
@@ -1218,7 +1225,10 @@ async function processPhoto(file, fromLib){
     headingSource: hdg.src,
     exifDir: exif.dir ?? null,
     exifTaken: taken,                                // BUILD 19: the camera's own clock, when the photo carries it
-    takenAt: Date.now(),
+    /* BUILD 24: a photo brought in from the library is dated by when the camera took it — a day's photos keep their
+       order, and the dates in the ArcGIS lists are true. addedAt is when it came into History Scout. */
+    takenAt: (fromLib && taken != null) ? taken : Date.now(),
+    addedAt: Date.now(),
     note: ''
   };
 }
@@ -1232,7 +1242,8 @@ $('#btnCam').onclick = () => $('#fileCam').click();
    retake joins the same site. Nothing here adds a step when the photo is good. */
 function paintLastShot(){
   const card = $('#lastShot'); if(!card) return;
-  const p = S.photos.reduce((a, b) => (!a || (b.takenAt || 0) > (a.takenAt || 0)) ? b : a, null);
+  const added = x => x.addedAt || x.takenAt || 0;             // BUILD 24: the photo brought in last, whenever it was taken
+  const p = S.photos.reduce((a, b) => (!a || added(b) > added(a)) ? b : a, null);
   if(!p){ card.hidden = true; S.lastShotId = null; return; }
   card.hidden = false;
   if(S.lastShotId !== p.id){ $('#lsImg').src = photoURL(p); S.lastShotId = p.id; }
@@ -1358,14 +1369,37 @@ $('#btnLib').onclick = () => $('#fileLib').click();
 $('#fileCam').onchange = e => intake([...e.target.files], e.target);
 $('#fileLib').onchange = e => intake([...e.target.files], e.target);
 
+/* BUILD 24: a photo already in History Scout is not brought in twice. It is recognised by the second its camera took it
+   together with its exact size in bytes — enough to tell burst shots apart. A photo with no camera clock is never judged
+   a duplicate, so nothing real is ever turned away. Deleted photos do not count: bringing one in again is allowed. */
+const photoKey = (taken, size) => (taken != null && size) ? Math.floor(taken / 1000) + '|' + size : null;
+async function skipKnown(files){
+  const have = new Set(S.photos.map(p => photoKey(p.exifTaken, p.size)).filter(Boolean));
+  const keep = [], seen = new Set(); let skipped = 0;
+  for(const f of files){
+    let k = null;
+    try{ k = photoKey(exifTime((await readEXIF(f)).taken), f.size); }catch(e){}
+    if(k && (have.has(k) || seen.has(k))){ skipped++; continue; }
+    if(k) seen.add(k);
+    keep.push(f);
+  }
+  return { keep: keep, skipped: skipped };
+}
+const skippedWords = n => n + ' photo' + (n === 1 ? ' was' : 's were') + ' already in History Scout — skipped';
+
 async function intake(files, input){
   if(!files.length) return;
+  const fromLib = !!input && input.id === 'fileLib';
+  let skipped = 0;
+  if(fromLib){ const r = await skipKnown(files); files = r.keep; skipped = r.skipped; }
+  if(!files.length){ if(input) input.value = ''; toast(skippedWords(skipped), 3800); return; }
   toast(files.length>1 ? `Processing ${files.length} photos…` : 'Processing photo…', 4000);
   try{
     const recs = [];
-    for(const f of files) recs.push(await processPhoto(f, !!input && input.id === 'fileLib'));
+    for(const f of files) recs.push(await processPhoto(f, fromLib));
     if(input) input.value = '';
-    recs.from = (input && input.id === 'fileCam') ? 'camera' : 'library';
+    recs.from = fromLib ? 'library' : 'camera';
+    recs.skipped = skipped;
     await routeRecs(recs);
   }catch(err){
     console.error(err);
@@ -1406,8 +1440,9 @@ async function routeRecs(recs){
   refreshAll(); paintRecBar();
   const sites = [...went.keys()].map(id => S.sites.find(x => x.id === id)).filter(Boolean);
   const newUnsorted = sites.filter(isUnsorted).length;
-  if(recs.length === 1 && sites[0]) toast(isUnsorted(sites[0]) ? '📥 Saved to Unsorted — ' + sites[0].name : 'Added to ' + sites[0].name);
-  else toast(recs.length + ' photos saved' + (newUnsorted ? ' — ' + newUnsorted + ' place' + (newUnsorted === 1 ? '' : 's') + ' in Unsorted' : ''), 3200);
+  const also = recs.skipped ? ' · ' + skippedWords(recs.skipped) : '';
+  if(recs.length === 1 && sites[0]) toast((isUnsorted(sites[0]) ? '📥 Saved to Unsorted — ' + sites[0].name : 'Added to ' + sites[0].name) + also, also ? 3800 : undefined);
+  else toast(recs.length + ' photos saved' + (newUnsorted ? ' — ' + newUnsorted + ' place' + (newUnsorted === 1 ? '' : 's') + ' in Unsorted' : '') + also, 3800);
 }
 
 /* ---------- the bar that says where photos are going ---------- */
@@ -1772,10 +1807,14 @@ function openSite(id){
     const inp = document.createElement('input');
     inp.type='file'; inp.accept='image/*'; if(cap) inp.capture='environment'; else inp.multiple=true;
     inp.onchange = async e => {
-      const fs=[...e.target.files]; if(!fs.length) return;
+      let fs=[...e.target.files]; if(!fs.length) return;
+      let skipped = 0;
+      if(!cap){ const r = await skipKnown(fs); fs = r.keep; skipped = r.skipped; }   // BUILD 24
+      if(!fs.length){ toast(skippedWords(skipped), 3800); return; }
       toast('Processing…',4000);
       const recs=[]; for(const f of fs) recs.push(await processPhoto(f, !cap));
       await attachTo(s.id, recs);
+      if(skipped) toast(skippedWords(skipped), 3800);
       closeSheet(); openSite(s.id);
     };
     inp.click();
@@ -1919,6 +1958,7 @@ async function openViewer(pid, siteId){
         <div class="kv"><span class="k">EXIF direction</span><span class="v">${p.exifDir!=null?p.exifDir.toFixed(0)+'°':'not present'}</span></div>
         <div class="kv"><span class="k">Elevation</span><span class="v">${p.alt!=null?Math.round(p.alt*3.28084)+' ft':'—'}</span></div>
         <div class="kv"><span class="k">Pixels</span><span class="v">${p.w} × ${p.h}</span></div>
+        <div class="kv"><span class="k">File type</span><span class="v">${fileKind(p)}</span></div>
         <div class="kv"><span class="k">Saved at</span><span class="v">${sizeLabel(p)}</span></div>
         <div class="kv"><span class="k">File size</span><span class="v">${fmtBytes(p.size)}</span></div>
         <div class="kv"><span class="k">Online copy</span><span class="v">${p.up&&p.up.done?'Sent '+fmtTime(p.up.at):'Not sent yet'}</span></div>
@@ -2627,7 +2667,7 @@ const Acct = {
 /* What goes online for a record: everything except the photo files themselves and the
    bookkeeping that only matters on this device. */
 const SITE_OUT  = ['id', 'name', 'category', 'lat', 'lon', 'acc', 'alt', 'heading', 'created', 'updated', 'sensitive', 'deleted', 'fields', '_t'];
-const PHOTO_OUT = ['id', 'siteId', 'takenAt', 'exifTaken', 'lat', 'lon', 'acc', 'alt', 'gpsSource', 'heading', 'headingSource', 'exifDir', 'editMeta',
+const PHOTO_OUT = ['id', 'siteId', 'takenAt', 'exifTaken', 'addedAt', 'lat', 'lon', 'acc', 'alt', 'gpsSource', 'heading', 'headingSource', 'exifDir', 'editMeta',
                    'w', 'h', 'size', 'note', 'deleted', 'up', 'updated', 'origMeta', '_t'];
 function toRemote(kind, r){
   const out = {};
