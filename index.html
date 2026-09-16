@@ -170,6 +170,7 @@ body.lefty #btnLib{order:2} body.lefty #btnCam{order:1}
 .sortcard .t{font-size:17px;font-weight:750;margin:0 0 4px}
 .sortcard .d{font-size:15px;color:var(--ink2);margin:0 0 10px}
 .chip.unsorted{border-color:#C9A04A;background:#F3E3B8;font-weight:750}
+.sortline.none{background:var(--bg2);border-color:var(--line);color:var(--ink2);font-weight:600}
 
 /* ---------- forms ---------- */
 label.f{display:block;margin-bottom:11px}
@@ -629,7 +630,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 22;
+const BUILD = 23;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -1603,8 +1604,8 @@ function paintFilters(){
   const counts = {};
   S.sites.forEach(s => counts[s.category] = (counts[s.category]||0)+1);
   let h = `<button class="chip ${S.filter==='all'?'on':''}" data-f="all">All ${S.sites.length}</button>`;
-  if(counts[UNSORTED]) h += `<button class="chip unsorted ${S.filter===UNSORTED?'on':''}" data-f="${UNSORTED}">📥 Unsorted ${counts[UNSORTED]}</button>`;
-  else if(S.filter === UNSORTED) S.filter = 'all';          // nothing left to sort: back to everything
+  // BUILD 23: always shown, even at 0, so Unsorted can always be found
+  h += `<button class="chip unsorted ${S.filter===UNSORTED?'on':''}" data-f="${UNSORTED}">📥 Unsorted ${counts[UNSORTED] || 0}</button>`;
   for(const c of S.cats){
     if(!counts[c.id]) continue;
     h += `<button class="chip ${S.filter===c.id?'on':''}" data-f="${c.id}">${c.ic} ${counts[c.id]}</button>`;
@@ -1618,7 +1619,8 @@ function paintSites(){
   const list = [...pick.filter(isUnsorted), ...pick.filter(s => !isUnsorted(s))];   // BUILD 21: what needs sorting first
   if(!list.length){
     $('#siteList').innerHTML = `<div class="empty"><span class="ic">🗂</span>
-      ${S.sites.length ? 'Nothing in this category yet.' : 'No sites yet.<br>Head to the Capture tab and photograph something old.'}</div>`;
+      ${S.filter === UNSORTED ? 'Nothing waiting to be sorted.<br>A photo taken where there is no site yet lands here.'
+        : S.sites.length ? 'Nothing in this category yet.' : 'No sites yet.<br>Head to the Capture tab and photograph something old.'}</div>`;
     return;
   }
   $('#siteList').innerHTML = list.map(s=>{
@@ -3609,8 +3611,9 @@ async function biFindEdits(btn){
 function paintSortLine(){
   const el = $('#sortLine'); if(!el) return;
   const waiting = S.sites.filter(isUnsorted), n = waiting.length;
-  el.hidden = !n;
-  if(!n) return;
+  el.hidden = false;                                           // BUILD 23: always there, so it can always be found
+  el.classList.toggle('none', !n);
+  if(!n){ el.textContent = '📥 Unsorted — nothing waiting'; return; }
   const ph = waiting.reduce((a, s) => a + photosOf(s.id).length, 0);
   el.textContent = '📥 ' + n + ' place' + (n === 1 ? '' : 's') + ' in Unsorted (' + ph + ' photo' + (ph === 1 ? '' : 's') + ') — tap to sort';
 }
