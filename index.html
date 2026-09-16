@@ -500,6 +500,12 @@ details.more[open] > summary::before{transform:rotate(90deg)}
             <option value="402">a quarter mile — a farm</option>
           </select>
         </label>
+        <label class="f" style="margin:12px 0 0"><span>Show distances in</span>
+          <select id="setUnits">
+            <option value="us">Feet and miles</option>
+            <option value="metric">Meters and kilometers</option>
+          </select>
+        </label>
         <label class="f" style="margin:12px 0 0"><span>Big button on the</span>
           <select id="setHand">
             <option value="right">Right — I hold the phone in my right hand</option>
@@ -635,7 +641,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 25;
+const BUILD = 26;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -794,7 +800,13 @@ function haversine(a,b,c,d){
   const x=Math.sin(dLa/2)**2 + Math.cos(a*p)*Math.cos(c*p)*Math.sin(dLo/2)**2;
   return 2*R*Math.asin(Math.sqrt(x));
 }
-const fmtDist = m => m==null ? '—' : m<1000 ? Math.round(m)+' m' : (m/1609.34).toFixed(1)+' mi';
+/* BUILD 26: feet and miles unless Meters is chosen. Only what is shown changes; everything is stored in meters. */
+const metric  = () => S.settings.units === 'metric';
+const fmtLen  = m => m==null ? '—' : metric() ? Math.round(m) + ' m' : Math.round(m * 3.28084) + ' ft';
+const fmtElev = fmtLen;
+const fmtDist = m => m==null ? '—' : metric()
+  ? (m < 1000 ? Math.round(m) + ' m' : (m / 1000).toFixed(1) + ' km')
+  : (m * 3.28084 < 1000 ? Math.round(m * 3.28084) + ' ft' : (m / 1609.34).toFixed(1) + ' mi');
 function fmtTime(ts){
   const d = new Date(ts);
   return d.toLocaleString([], {weekday:'short', month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit'});
@@ -845,7 +857,7 @@ const S = {
   filter: 'all',
   currentSiteId: null,   // where photos are landing right now
   forceNew: false,       // you pressed "+ New" — the next photo starts a fresh site
-  settings: {fullSize:true, stampCopies:false, stampView:true, grouping:true, groupRadius:274, recordedBy:'', hand:'right', sticky:{}, settingsV:2},
+  settings: {fullSize:true, stampCopies:false, stampView:true, grouping:true, groupRadius:274, recordedBy:'', hand:'right', units:'us', sticky:{}, settingsV:2},
   urls: new Map()            // photoId -> objectURL cache
 };
 /* BUILD 21: photos from a new place wait here until they are sorted. It is never one of the categories you pick
@@ -960,7 +972,7 @@ function paintGPS(){
   if(!p) return;
   const cls = p.acc<=10 ? 'good' : p.acc<=25 ? 'warn' : 'bad';
   $('#stGps').innerHTML = `<span class="dot ${cls}"></span>${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`;
-  $('#stGpsSub').textContent = `±${p.acc.toFixed(0)} m` + (p.alt!=null ? ` · ${Math.round(p.alt*3.28084)} ft elev` : '');
+  $('#stGpsSub').textContent = `±${fmtLen(p.acc)}` + (p.alt!=null ? ` · ${fmtElev(p.alt)} elev` : '');
   const n = nearestSite(p.lat, p.lon);
   $('#kNear').textContent = n ? `${n.site.name} · ${fmtDist(n.d)}` : '—';
 }
@@ -1560,9 +1572,9 @@ async function stamp(photo, site){
     {t: site.name, s: f1, w: '700', title: true},
     {t: `${catById(site.category).name}${site.fields.condition ? ' · ' + site.fields.condition : ''}`, s: f3, w: '500'},
     {t: site.sensitive ? 'Location withheld — sensitive site' : photo.lat!=null ? `${dms(photo.lat,true)}   ${dms(photo.lon,false)}` : 'no position recorded', s: f2, w:'600'},
-    {t: site.sensitive ? '' : photo.lat!=null ? `${photo.lat.toFixed(6)}, ${photo.lon.toFixed(6)}${photo.acc!=null?`   ±${photo.acc.toFixed(0)} m`:''}` : '', s: f3, w:'500'},
+    {t: site.sensitive ? '' : photo.lat!=null ? `${photo.lat.toFixed(6)}, ${photo.lon.toFixed(6)}${photo.acc!=null?`   ±${fmtLen(photo.acc)}`:''}` : '', s: f3, w:'500'},
     {t: `${fmtTime(photo.takenAt)}`, s: f3, w:'500'},
-    {t: photo.heading!=null ? `Facing ${photo.heading.toFixed(0)}° ${cardinal(photo.heading)}${photo.alt!=null?`   ·   ${Math.round(photo.alt*3.28084)} ft elev`:''}` : (photo.alt!=null?`${Math.round(photo.alt*3.28084)} ft elev`:''), s: f3, w:'500'}
+    {t: photo.heading!=null ? `Facing ${photo.heading.toFixed(0)}° ${cardinal(photo.heading)}${photo.alt!=null?`   ·   ${fmtElev(photo.alt)} elev`:''}` : (photo.alt!=null?`${fmtElev(photo.alt)} elev`:''), s: f3, w:'500'}
   ].filter(l=>l.t);
 
   /* Fit to the frame. Long names — "Old Salem Methodist Episcopal Church South" —
@@ -1770,8 +1782,8 @@ function openSite(id){
     <div class="kv"><span class="k">Latitude</span><span class="v">${s.lat!=null?s.lat.toFixed(6):'—'}</span></div>
     <div class="kv"><span class="k">Longitude</span><span class="v">${s.lon!=null?s.lon.toFixed(6):'—'}</span></div>
     <div class="kv"><span class="k">DMS</span><span class="v">${s.lat!=null?dms(s.lat,true)+'<br>'+dms(s.lon,false):'—'}</span></div>
-    <div class="kv"><span class="k">Accuracy</span><span class="v">${s.acc!=null?'±'+s.acc.toFixed(0)+' m':'—'}</span></div>
-    <div class="kv"><span class="k">Elevation</span><span class="v">${s.alt!=null?Math.round(s.alt*3.28084)+' ft':'—'}</span></div>
+    <div class="kv"><span class="k">Accuracy</span><span class="v">${s.acc!=null?'±'+fmtLen(s.acc):'—'}</span></div>
+    <div class="kv"><span class="k">Elevation</span><span class="v">${s.alt!=null?fmtElev(s.alt):'—'}</span></div>
     <div class="kv"><span class="k">Facing</span><span class="v">${s.heading!=null?s.heading.toFixed(0)+'° '+cardinal(s.heading):'—'}</span></div>
     <div class="kv"><span class="k">First recorded</span><span class="v">${fmtTime(s.created)}</span></div>
     <div class="btnrow" style="margin-top:10px">
@@ -1954,12 +1966,12 @@ async function openViewer(pid, siteId){
         <div class="kv"><span class="k">Camera's own clock</span><span class="v">${p.exifTaken === undefined ? 'not recorded before BUILD 19' : p.exifTaken === null ? 'not in the photo' : fmtTime(p.exifTaken)}</span></div>
         <div class="kv"><span class="k">Latitude</span><span class="v">${p.lat!=null?p.lat.toFixed(6):'—'}</span></div>
         <div class="kv"><span class="k">Longitude</span><span class="v">${p.lon!=null?p.lon.toFixed(6):'—'}</span></div>
-        <div class="kv"><span class="k">Accuracy</span><span class="v">${p.acc!=null?'±'+p.acc.toFixed(0)+' m':'—'}</span></div>
+        <div class="kv"><span class="k">Accuracy</span><span class="v">${p.acc!=null?'±'+fmtLen(p.acc):'—'}</span></div>
         <div class="kv"><span class="k">Location came from</span><span class="v">${esc(gpsWords(p.gpsSource))}</span></div>
         <div class="kv"><span class="k">Heading</span><span class="v">${p.heading!=null?p.heading.toFixed(0)+'° '+cardinal(p.heading):'—'}</span></div>
         <div class="kv"><span class="k">Heading source</span><span class="v">${esc(p.headingSource||'—')}</span></div>
         <div class="kv"><span class="k">EXIF direction</span><span class="v">${p.exifDir!=null?p.exifDir.toFixed(0)+'°':'not present'}</span></div>
-        <div class="kv"><span class="k">Elevation</span><span class="v">${p.alt!=null?Math.round(p.alt*3.28084)+' ft':'—'}</span></div>
+        <div class="kv"><span class="k">Elevation</span><span class="v">${p.alt!=null?fmtElev(p.alt):'—'}</span></div>
         <div class="kv"><span class="k">Pixels</span><span class="v">${p.w} × ${p.h}</span></div>
         <div class="kv"><span class="k">File type</span><span class="v">${fileKind(p)}</span></div>
         <div class="kv"><span class="k">Saved at</span><span class="v">${sizeLabel(p)}</span></div>
@@ -2260,6 +2272,8 @@ function paintSettings(){
   $('#setRecorder').value = S.settings.recordedBy || '';
   $('#setRadius').value   = String(S.settings.groupRadius || 274);
   $('#setHand').value     = S.settings.hand === 'left' ? 'left' : 'right';
+  $('#setUnits').value    = metric() ? 'metric' : 'us';
+  paintRadiusLabels();
   applyHand();
 }
 /* BUILD 19: Capture on the side of the hand holding the phone. Anything but 'left' is right-handed. */
@@ -2271,6 +2285,13 @@ $$('#v-more .tg[data-set]').forEach(t => t.onclick = () => {
 });
 $('#setRecorder').onchange = e => { S.settings.recordedBy = e.target.value.trim(); saveSettings(); toast('Saved'); };
 $('#setRadius').onchange   = e => { S.settings.groupRadius = +e.target.value; saveSettings(); toast('Saved'); };
+/* BUILD 26: the nearness choices read in the chosen units; the distances themselves never change. */
+function paintRadiusLabels(){
+  const words = { 46: 'a single building', 91: 'a house and its outbuildings', 274: 'a whole homestead or cemetery', 402: 'a farm' };
+  const us = { 46: '50 yards', 91: '100 yards', 274: '300 yards', 402: 'a quarter mile' };
+  $$('#setRadius option').forEach(o => { const m = +o.value; o.textContent = (metric() ? Math.round(m) + ' m' : us[m]) + ' — ' + words[m]; });
+}
+$('#setUnits').onchange    = e => { S.settings.units = e.target.value === 'metric' ? 'metric' : 'us'; saveSettings(); paintRadiusLabels(); paintGPS(); refreshAll(); toast('Saved'); };
 $('#setHand').onchange     = e => { S.settings.hand = e.target.value; saveSettings(); applyHand(); toast('Saved'); };
 /* BUILD 16: shown over the app with a Done button. On a phone the app has no browser bar, so a page
    opened in a new window left no way back. */
@@ -2335,7 +2356,7 @@ function runDiag(){
   const rows = [
     ['Secure context (https)', window.isSecureContext, window.isSecureContext?'required for GPS + compass':'GPS and compass will not work'],
     ['Installed to home screen', std, std?'storage is durable':'add to Home Screen for durable storage'],
-    ['Geolocation API', !!navigator.geolocation, S.pos?`fix ±${S.pos.acc.toFixed(0)} m`:'no fix yet'],
+    ['Geolocation API', !!navigator.geolocation, S.pos?`fix ±${fmtLen(S.pos.acc)}`:'no fix yet'],
     ['Compass permission API', typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function', 'iOS 13+ gesture gate'],
     ['Compass permission given', S.compassPerm==='granted'||S.compassPerm==='not required', S.compassPerm||'not asked yet'],
     ['Sensor events arriving', S.orientSeen>0, S.orientSeen>0?S.orientSeen+' events received':'none — sensor is silent'],
