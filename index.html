@@ -641,7 +641,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 29;
+const BUILD = 30;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -944,7 +944,7 @@ const S = {
   filter: 'all',
   currentSiteId: null,   // where photos are landing right now
   forceNew: false,       // you pressed "+ New" — the next photo starts a fresh site
-  settings: {fullSize:true, stampCopies:false, stampView:true, grouping:true, groupRadius:274, recordedBy:'', hand:'right', units:'us', sticky:{}, settingsV:2},
+  settings: {fullSize:true, stampCopies:false, stampView:true, grouping:true, groupRadius:274, recordedBy:'', hand:'right', units:'us', autoFile:true, sticky:{}, settingsV:2},
   urls: new Map()            // photoId -> objectURL cache
 };
 /* BUILD 21: photos from a new place wait here until they are sorted. It is never one of the categories you pick
@@ -2861,7 +2861,7 @@ const Sync = {
       map.set(rec.id, rec);
       changed++;
     }
-    if(changed){ rebuild(); refreshSoft(); if(Sync.dirtyN()) Sync.soon(); }
+    if(changed){ rebuild(); refreshSoft(); if(Sync.dirtyN()) Sync.soon(); if(canFolders()) AutoFile.soon(15000); }   // BUILD 30
     Sync.lastOk = now(); Sync.err = null; paintSyncLine();
   },
 
@@ -3510,7 +3510,7 @@ async function biPickOne(){
     await h.getDirectoryHandle('Photos', { create: true });
     await h.getDirectoryHandle('Records', { create: true });
     BI.mode = 'one'; BI.one = h; BI.names.one = h.name; BI.advanced = false;
-    await biSave(); paintPC();
+    await biSave(); paintPC(); AutoFile.soon(1500);
     toast('History Scout keeps your files in ' + h.name + ' — Photos and Records are inside it', 3600);
   }catch(err){ if(err.name !== 'AbortError') toast('Could not use that folder: ' + err.message, 3400); }
 }
@@ -3520,7 +3520,7 @@ async function biPick(which){
     const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'hs-' + which, startIn: 'documents' });
     if(!(await biPermit(h))){ toast('History Scout needs permission for that folder'); return; }
     BI[which] = h; BI.names[which] = h.name; BI.mode = 'split';
-    await biSave(); paintPC();
+    await biSave(); paintPC(); AutoFile.soon(1500);
     toast('Folder chosen: ' + h.name);
   }catch(err){ if(err.name !== 'AbortError') toast('Could not use that folder: ' + err.message, 3400); }
 }
@@ -3537,11 +3537,18 @@ async function biRoots(){
            photosName: BI.names.photos || '', recordsName: BI.names.records || '', inside: '' };
 }
 
-async function biReady(){
-  if(!biSet()){ toast('Choose a folder first'); return null; }
+async function biReady(quiet){
+  if(!biSet()){ if(!quiet) toast('Choose a folder first'); return null; }
   const tops = BI.mode === 'one' ? [[BI.one, 'folder', BI.names.one]]
                                  : [[BI.photos, 'photo folder', BI.names.photos], [BI.records, 'records folder', BI.names.records]];
   for(const [h, what, nm] of tops){
+    if(quiet){
+      let st = 'granted';
+      try{ if(typeof h.queryPermission === 'function') st = await h.queryPermission({ mode: 'readwrite' }); }catch(e){ st = 'denied'; }
+      if(st !== 'granted'){ AutoFile.needPermit = true; return null; }           // never ask without a tap
+      if(!(await biReachable(h))){ AutoFile.status = 'The ' + what + ' (' + (nm || '') + ') is not connected — new photos will be filed when it is back.'; return null; }
+      continue;
+    }
     if(!(await biPermit(h))){ toast('History Scout needs permission for the ' + what + ' — press the button again and allow it', 4200); return null; }
     if(!(await biReachable(h))){
       openSheet('<h2>That folder isn’t there</h2>' +
@@ -3551,7 +3558,7 @@ async function biReady(){
       return null;
     }
   }
-  try{ return await biRoots(); }catch(err){ toast('Could not open the folders: ' + err.message, 3600); return null; }
+  try{ return await biRoots(); }catch(err){ if(quiet) AutoFile.status = 'Could not open the folders: ' + err.message; else toast('Could not open the folders: ' + err.message, 3600); return null; }
 }
 
 /* A file is only ever created when nothing of that name is there. */
@@ -3627,7 +3634,7 @@ function csvFiled(rows){
 async function bringInNew(btn, opts){
   opts = opts || {};
   if(BI.running) return;
-  const roots = await biReady(); if(!roots) return;
+  const roots = await biReady(opts.quiet); if(!roots) return;
   BI.running = true; BI.problems = []; BI.result = '';
   const old = btn ? btn.textContent : '';
   const stamp = new Date().toISOString().slice(0, 10);
@@ -3710,6 +3717,16 @@ async function bringInNew(btn, opts){
     if(btn) btn.textContent = old;
   }
   const holding = S.sites.filter(isUnsorted).reduce((a, s) => a + photosOf(s.id).length, 0);
+  if(opts.quiet){                                               // BUILD 30: filed by itself — a short note, no window
+    AutoFile.status = BI.problems[0] || '';
+    if(filed || wrote.length){
+      BI.result = filed + ' photo' + (filed === 1 ? '' : 's') + ' filed' + (wrote.length ? ', ' + wrote.length + ' list' + (wrote.length === 1 ? '' : 's') + ' written' : '') +
+        ' · ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });   // only what was really written
+      toast((BI.problems.length ? '⚠ ' : '📥 ') + 'Filed on your drive: ' + BI.result + (BI.problems.length ? ' — ' + BI.problems[0] : ''), BI.problems.length ? 7000 : 4000);
+    }
+    paintPC();
+    return;
+  }
   biReport({ filed: filed, already: already, waiting: waiting, unsorted: holding, wrote: wrote, sites: newRows.length,
              changed: changedRows.length, photosName: roots.photosName, recordsName: roots.recordsName });
   paintPC();
@@ -3721,7 +3738,7 @@ function biReport(r){
   if(r.wrote.length) for(const w of r.wrote) li.push('<li>Wrote <b>' + esc(w) + '</b> into <b>' + esc(r.recordsName || 'your records folder') + '</b>.</li>');
   else li.push('<li>No new or changed sites to list, so no list was written.</li>');
   if(r.already) li.push('<li>' + r.already + ' photo' + (r.already === 1 ? ' was' : 's were') + ' already there, and left alone.</li>');
-  if(r.waiting) li.push('<li>' + r.waiting + ' photo' + (r.waiting === 1 ? ' is' : 's are') + ' still only on the phone — press <b>Send</b> there, then bring in again.</li>');
+  if(r.waiting) li.push('<li>' + r.waiting + ' photo' + (r.waiting === 1 ? ' is' : 's are') + ' still only on the phone — ' + (r.waiting === 1 ? 'it is' : 'they are') + ' filed once the phone has sent ' + (r.waiting === 1 ? 'it' : 'them') + '.</li>');
   if(r.unsorted) li.push('<li>' + r.unsorted + ' photo' + (r.unsorted === 1 ? ' is' : 's are') + ' waiting in <b>📥 Unsorted</b> and ' + (r.unsorted === 1 ? 'was' : 'were') + ' left out. Sort ' + (r.unsorted === 1 ? 'it' : 'them') + ', then bring in again.</li>');
   for(const p of BI.problems) li.push('<li class="warn">' + esc(p) + '</li>');
   BI.result = r.filed + ' photo' + (r.filed === 1 ? '' : 's') + ' filed' + (r.sites ? ', ' + r.sites + ' new site' + (r.sites === 1 ? '' : 's') + ' listed' : '') + (r.changed ? ', ' + r.changed + ' changed' : '');
@@ -3747,14 +3764,41 @@ async function biDownloadNew(btn){
   paintPC();
 }
 
+/* BUILD 30 — filing by itself while History Scout is open on a computer. */
+const AutoFile = { t: null, busy: false, needPermit: false, status: '', told: false };
+const isComputer = () => !(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)));
+async function autoFile(){
+  if(!canFolders() || !biSet() || S.settings.autoFile === false || BI.running || AutoFile.busy) return;
+  AutoFile.busy = true; AutoFile.needPermit = false;
+  try{
+    const p = biPending();
+    AutoFile.status = '';
+    if(p.photos || p.fresh || p.changed) await bringInNew(null, { quiet: true });
+    if(!AutoFile.needPermit && !AutoFile.status) await biFindEdits(null, true);
+    if(AutoFile.needPermit && !AutoFile.told){
+      AutoFile.told = true;
+      toast('📥 To file new photos on your drive, History Scout needs one tap: More → Allow', 6000);
+    }
+  }catch(err){ console.warn('auto file', err); AutoFile.status = 'Filing stopped: ' + (err.message || err.name); }
+  finally{ AutoFile.busy = false; paintPC(); }
+}
+AutoFile.soon = d => { clearTimeout(AutoFile.t); AutoFile.t = setTimeout(autoFile, d == null ? 5000 : d); };
+async function autoFilePermit(){
+  const tops = BI.mode === 'one' ? [BI.one] : [BI.photos, BI.records];
+  for(const h of tops) if(!(await biPermit(h))){ toast('Not allowed — History Scout can’t file into that folder until it is', 3600); return; }
+  AutoFile.needPermit = false; paintPC(); AutoFile.soon(300);
+}
+
 function paintPC(){
   const box = $('#pcBody'); if(!box) return;
   const p = biPending();
-  const waitingLine = p.waiting ? '<p class="hint" style="margin:8px 0 0">' + p.waiting + ' photo' + (p.waiting === 1 ? ' is' : 's are') + ' still only on the phone. Press <b>Send</b> there first.</p>' : '';
+  const waitingLine = p.waiting ? '<p class="hint" style="margin:8px 0 0">' + p.waiting + ' photo' + (p.waiting === 1 ? ' is' : 's are') + ' still only on the phone. ' + (p.waiting === 1 ? 'It comes' : 'They come') + ' across once the phone has sent ' + (p.waiting === 1 ? 'it' : 'them') + ' — that happens by itself when the phone has signal.</p>' : '';
   const on = (id, fn) => { const el = $('#' + id); if(el) el.onclick = fn; };
 
   if(!canFolders()){
-    box.innerHTML = '<p class="hint" style="margin:0 0 11px">On a computer, in Edge or Chrome, History Scout files your photos straight into folders of your own. This browser can’t write into folders, so it downloads one ZIP per site instead.</p>' +
+    box.innerHTML = (isComputer()
+      ? '<p class="formmsg bad" style="margin:0 0 11px"><b>This browser can’t file photos into your folders.</b> Open History Scout in <b>Chrome</b> or <b>Edge</b> — both free, on Windows or Mac — and new photos and edits are filed onto your drive by themselves. Here, you can download each site as a ZIP instead.</p>'
+      : '<p class="hint" style="margin:0 0 11px">Filing photos into folders happens on your computer, in Chrome or Edge. Here, you can download each site as a ZIP instead.</p>') +
       '<button class="btn full" id="pcDown">⬇ Download ' + (p.fresh || 'new') + ' site' + (p.fresh === 1 ? '' : 's') + '</button>' + waitingLine;
     on('pcDown', () => biDownloadNew($('#pcDown')));
     return;
@@ -3785,8 +3829,16 @@ function paintPC(){
     : '<div class="folder"><span>Photos go to</span><b>' + esc(BI.names.photos || '') + '</b></div>' +
       '<div class="folder"><span>Records go to</span><b>' + esc(BI.names.records || '') + '</b></div>';
   const waiting = [p.photos ? p.photos + ' photo' + (p.photos === 1 ? '' : 's') : '', p.fresh ? p.fresh + ' new site' + (p.fresh === 1 ? '' : 's') : '', p.changed ? p.changed + ' changed' : ''].filter(Boolean).join(', ');
+  const autoOn = S.settings.autoFile !== false;
   box.innerHTML = where +
-    '<button class="btn pri full" id="pcGo" style="margin-top:10px">📥 Bring in new' + (waiting ? ' — ' + waiting : '') + '</button>' +
+    (autoOn && AutoFile.needPermit
+      ? '<p class="formmsg bad" style="margin:10px 0 0">Your browser wants permission again before History Scout can file into your folder.</p>' +
+        '<button class="btn pri full" id="pcPermit" style="margin-top:8px">✅ Allow</button>' +
+        '<p class="hint" style="margin:6px 0 0">If it offers <b>Allow on every visit</b>, choose that and you won’t be asked again.</p>'
+      : autoOn
+        ? '<p class="formmsg ' + (AutoFile.status ? 'bad' : 'good') + '" style="margin:10px 0 0">' + (AutoFile.status ? '⚠ ' + esc(AutoFile.status) : '✓ New photos and edited photos are filed by themselves while History Scout is open.') + '</p>'
+        : '') +
+    '<button class="btn ' + (autoOn ? '' : 'pri ') + 'full" id="pcGo" style="margin-top:10px">📥 Bring in new' + (waiting ? ' — ' + waiting : '') + '</button>' +
     '<button class="btn full" id="pcEdits" style="margin-top:8px">✨ Check for edited photos</button>' +
     '<p class="hint" style="margin:10px 0 0">Photos land in <b>Category › Site</b> folders. Nothing already there is ever replaced, and only what hasn’t been brought in before is written.</p>' +
     waitingLine +
@@ -3797,6 +3849,7 @@ function paintPC(){
           '<button class="btn full" id="pcTwo" style="margin-top:8px">Use two folders instead</button>'
         : '<div class="btnrow"><button class="btn" id="pcF1">📁 Photo folder</button><button class="btn" id="pcF2">📁 Records folder</button></div>' +
           '<button class="btn full" id="pcOne" style="margin-top:8px">Use one folder instead</button>') +
+      '<label class="f" style="margin:12px 0 0"><span>File new photos and edits by themselves</span><select id="pcAuto"><option value="on">Yes, while History Scout is open</option><option value="off">No, only when I press the buttons</option></select></label>' +
       '<button class="btn full" id="pcAll" style="margin-top:8px">📥 Bring in everything again</button>' +
       '<p class="hint" style="margin:8px 0 0">Use that after changing folders: it fills the new folder from the start. It still never replaces a file already there.</p>' +
       '<label class="f" style="margin:12px 0 0"><span>Full path of your folder (optional)</span>' +
@@ -3806,6 +3859,9 @@ function paintPC(){
   on('pcGo', () => bringInNew($('#pcGo')));
   on('pcEdits', () => biFindEdits($('#pcEdits')));
   on('pcAll', () => bringInNew($('#pcAll'), { all: true }));
+  on('pcPermit', autoFilePermit);
+  const sel = $('#pcAuto');
+  if(sel){ sel.value = autoOn ? 'on' : 'off'; sel.onchange = async () => { S.settings.autoFile = sel.value === 'on'; await saveSettings(); paintPC(); if(S.settings.autoFile) AutoFile.soon(300); }; }
   on('pcOne', biPickOne); on('pcF1', () => biPick('photos')); on('pcF2', () => biPick('records'));
   on('pcTwo', () => { BI.mode = 'split'; BI.advanced = true; biSave(); paintPC(); });
   const box2 = $('#pcPath');
@@ -3858,8 +3914,8 @@ function pickEdit(p, done){
    filed there — "Old Salem Church 01 edited.jpg", and "… edited 2.jpg" for a second pass. Files are
    only READ: nothing on your drive is renamed, moved, replaced or deleted. */
 const EDIT_EXT = ['jpg', 'jpeg', 'png', 'tif', 'tiff', 'webp', 'heic'];
-async function biFindEdits(btn){
-  const roots = await biReady(); if(!roots) return;
+async function biFindEdits(btn, quiet){
+  const roots = await biReady(quiet); if(!roots) return;
   const old = btn ? btn.textContent : '';
   let found = 0, already = 0, looked = 0;
   const problems = [], names = [];
@@ -3886,6 +3942,7 @@ async function biFindEdits(btn){
           if(btn) btn.textContent = '⏳ reading ' + n + '…';
           try{
             const f = await (await dir.getFileHandle(n)).getFile();
+            if(quiet && Date.now() - f.lastModified < 60000) continue;   // BUILD 30: saved under a minute ago — next round
             await addEdit(p, f);
             found++; names.push(sp.site + ' — ' + n);
           }catch(err){ problems.push('Could not read ' + n + ': ' + (err.message || err.name)); }
@@ -3895,6 +3952,11 @@ async function biFindEdits(btn){
   }catch(err){ problems.push('Stopped early: ' + (err.message || err.name)); }
   finally{ if(btn) btn.textContent = old; }
   refreshAll(); paintPC();
+  if(quiet){
+    if(problems.length) AutoFile.status = problems[0];
+    if(found) toast('✨ ' + found + ' edited photo' + (found === 1 ? '' : 's') + ' added: ' + names.join('; '), 5000);
+    return;
+  }
   const li = [];
   li.push('<li>Looked through <b>' + looked + '</b> site folder' + (looked === 1 ? '' : 's') + '.</li>');
   li.push(found ? '<li><b>' + found + '</b> edited photo' + (found === 1 ? '' : 's') + ' added to their records:<br>' + names.map(esc).join('<br>') + '</li>'
@@ -3903,7 +3965,7 @@ async function biFindEdits(btn){
   for(const pr of problems) li.push('<li class="warn">' + esc(pr) + '</li>');
   openSheet('<h2>Edited photos</h2><ul class="bi-report">' + li.join('') + '</ul>' +
     '<p class="hint" style="margin-top:12px">Your files were only read. Nothing on the drive was renamed, moved or replaced, and the camera’s original stays in the record beside your edit.' +
-    (found ? ' Press <b>Send</b> to put the edited version online too.' : '') + '</p>' +
+    (found ? ' The edited version goes to your account by itself.' : '') + '</p>' +
     '<button class="btn pri full" id="feDone" style="margin-top:6px">Done</button>');
   $('#feDone').onclick = closeSheet;
 }
@@ -3949,6 +4011,12 @@ function refreshAll(){
   if(!S.acct.mode) showGate(true);
   if(S.acct.mode === 'account') fbLoad().catch(err => { console.warn('firebase', err); S.acct.state = S.acct.approved ? 'offline' : 'offline'; paintAcct(); paintSyncLine(); });
   await biLoad();
+  /* BUILD 30: file by itself — shortly after opening, every 5 minutes, and on coming back to the window */
+  if(canFolders()){ AutoFile.soon(8000); setInterval(() => AutoFile.soon(0), 5 * 60000); }
+  else if(isComputer()){
+    try{ if(!localStorage.getItem('hs-browser-told')){ localStorage.setItem('hs-browser-told', '1');
+      setTimeout(() => toast('To file photos onto your computer’s drive by themselves, open History Scout in Chrome or Edge', 7000), 3000); } }catch(e){}
+  }
   if(isDesk()) showView('sites');
   paintSyncLine();
   startGPS();
@@ -4031,7 +4099,7 @@ function checkForUpdate(){
     })
     .catch(()=>{});
 }
-document.addEventListener('visibilitychange', () => { if(!document.hidden){ checkForUpdate(); Send.soon(2000); } });
+document.addEventListener('visibilitychange', () => { if(!document.hidden){ checkForUpdate(); Send.soon(2000); if(canFolders()) AutoFile.soon(3000); } });
 /* pageshow fires when iOS wakes a suspended home-screen app without reloading it,
    which is the usual way it gets reopened — visibilitychange alone can miss it. */
 window.addEventListener('pageshow', () => setTimeout(checkForUpdate, 800));
