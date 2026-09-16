@@ -641,7 +641,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 30;
+const BUILD = 31;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -3353,7 +3353,8 @@ function openCloudPhotos(){
   let h = '<h2>Photos in my account</h2><p class="hint" style="margin:-4px 0 12px">' + sent.length + ' photo' + (sent.length === 1 ? '' : 's') + ', each loaded from your account online.</p>';
   for(const [sid, ph] of [...bySite.entries()].sort((a, b) => (S.all.sites.get(b[0]).created || 0) - (S.all.sites.get(a[0]).created || 0))){
     h += '<div class="sec-h">' + esc(S.all.sites.get(sid).name) + '</div><div class="pgrid" style="margin-bottom:12px">' +
-      ph.sort((a, b) => a.takenAt - b.takenAt).map(p => '<div class="cell"><img data-cloud="' + esc((p.up.disp || p.up.orig).path) + '" src="' + PH_LOAD + '" alt=""></div>').join('') + '</div>';
+      ph.sort((a, b) => a.takenAt - b.takenAt).map(p => { const e = (p.up.edits || [])[(p.up.edits || []).length - 1];   // BUILD 31: your newest edit, when one is online
+        return '<div class="cell"><img data-cloud="' + esc(((e && (e.disp || e)) || p.up.disp || p.up.orig).path) + '" src="' + PH_LOAD + '" alt=""><span class="n">' + (e ? '✨ edited' : 'original') + '</span></div>'; }).join('') + '</div>';
   }
   h += '<button class="btn full" id="cloudDone">Done</button>';
   openSheet(h);
