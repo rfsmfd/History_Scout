@@ -641,7 +641,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 26;
+const BUILD = 27;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -2590,6 +2590,8 @@ function fbLoad(){
       FB.auth = auth.initializeAuth(FB.app, { persistence: [auth.indexedDBLocalPersistence, auth.browserLocalPersistence] });
       FB.db   = fst.initializeFirestore(FB.app, { ignoreUndefinedProperties: true });
       FB.st   = st.getStorage(FB.app);
+      FB.st.maxOperationRetryTime = 30000;   // BUILD 27: the library's own 2 and 10 minutes of silent retrying looked like a hang
+      FB.st.maxUploadRetryTime    = 60000;
       auth.onAuthStateChanged(FB.auth, u => { if(S.acct.mode === 'account') Acct.evaluate(u); });
       return FB;
     })
@@ -2857,8 +2859,33 @@ function setLocalCats(m){
    So a photo counts as sent only when Google confirms its copy at the exact size; until then it
    is simply sent again next time. Nothing is ever removed from this device. */
 const hasLocal = p => { const o = origFile(p); return !!(o && o.blob); };
+/* BUILD 27: read the whole file before sending it. A phone can lose the file behind a saved photo; the upload
+   library reports that only as a network failure and retries it. Reading it here names the real problem at once. */
+function readable(blob){
+  const read = blob.size > 150 * 1024 * 1024
+    ? Promise.all([blob.slice(0, 1 << 20).arrayBuffer(), blob.slice(blob.size - (1 << 20)).arrayBuffer()])
+    : blob.arrayBuffer();
+  return Promise.race([read.then(() => true), new Promise(r => setTimeout(() => r(false), 20000))])
+    .catch(() => false)
+    .then(ok => { if(!ok) throw Object.assign(new Error('this phone could not read the photo’s full-size file'), { code: 'hs/unreadable' }); });
+}
+function sendWhich(p){
+  if(!p) return 'a photo';
+  const s = S.all.sites.get(p.siteId);
+  return 'a photo of ' + (s ? s.name : 'an unnamed site') + (p.takenAt ? ' (' + new Date(p.takenAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ')' : '');
+}
+function sendWhy(err){
+  const c = err && err.code || '';
+  if(c === 'storage/retry-limit-exceeded') return 'Google could not be reached, or kept failing, for too long. Check the signal and press Send again.';
+  if(c === 'storage/unauthorized') return 'Google refused it for this account (' + c + ').';
+  if(c === 'storage/unauthenticated') return 'this phone is no longer signed in — sign in again under More.';
+  return (err && err.message || c || 'unknown') + (c && !c.startsWith('hs/') && !(err.message || '').includes(c) ? ' (' + c + ')' : '');
+}
+
 const Send = {
   running: false, cancel: false, task: null, done: 0, total: 0, bytesDone: 0, bytesTotal: 0, err: null, lastResult: '',
+  stage: '', stageAt: 0, photo: null, clock: null,
+  setStage(words){ Send.stage = words; Send.stageAt = Date.now(); paintSend(); },
 
   editsWaiting(p){ return editFiles(p).filter(f => !((p.up && p.up.edits) || []).some(u => u.name === f.name && u.size === f.size)).length; },
   pending(){ return [...S.all.photos.values()].filter(p => !p.deleted && (!(p.up && p.up.done) || Send.editsWaiting(p)) && hasLocal(p) &&
@@ -2873,22 +2900,25 @@ const Send = {
     if(!list.length){ toast('Every photo is already sent'); return; }
     Send.running = true; Send.cancel = false; Send.err = null; Send.done = 0; Send.total = list.length;
     Send.bytesDone = 0; Send.bytesTotal = Send.pendingBytes();
+    Send.stage = ''; Send.photo = null;
+    Send.clock = setInterval(() => { const el = $('#sendStage'); if(el && Send.stage) el.textContent = Send.stage + ' · ' + Math.floor((Date.now() - Send.stageAt) / 1000) + ' s'; }, 1000);   // BUILD 27: the screen keeps moving, so a stall is visible as a stall
     let lock = null;
     try{ if(navigator.wakeLock) lock = await navigator.wakeLock.request('screen'); }catch(e){}   // keep the screen awake while sending
     paintSend();
     try{
       for(const p of list){
         if(Send.cancel) break;
+        Send.photo = p;
         await Send.one(p);
         Send.done++; paintSend();
       }
     }catch(err){
       Send.err = err; console.warn('send', err);
     }finally{
-      Send.running = false; Send.task = null;
+      Send.running = false; Send.task = null; clearInterval(Send.clock); Send.clock = null;
       if(lock){ try{ lock.release(); }catch(e){} }
       Send.lastResult = Send.err
-        ? (Send.cancel || (Send.err.code === 'storage/canceled') ? 'Stopped. ' : 'Stopped: ' + (Send.err.message || Send.err.code) + ' ') +
+        ? (Send.cancel || (Send.err.code === 'storage/canceled') ? 'Stopped. ' : 'Stopped at ' + sendWhich(Send.photo) + (Send.stage ? ', while ' + Send.stage.charAt(0).toLowerCase() + Send.stage.slice(1) : '') + ': ' + sendWhy(Send.err) + ' ') +
           Send.done + ' of ' + Send.total + ' sent — press Send again to carry on.'
         : Send.cancel ? 'Stopped. ' + Send.done + ' of ' + Send.total + ' sent — press Send again to carry on.'
         : 'All ' + Send.done + ' photo' + (Send.done === 1 ? '' : 's') + ' sent and confirmed.' +
@@ -2932,6 +2962,9 @@ const Send = {
      to replace a file, so a copy online is never overwritten. */
   async file(path, blob, type){
     const st = FB.m.st, ref = st.ref(FB.st, path);
+    Send.setStage('Reading the photo on this phone');
+    await readable(blob);
+    Send.setStage('Asking Google whether it is already there');
     try{
       const md = await st.getMetadata(ref);
       if(+md.size === blob.size){ Send.bytesDone += blob.size; return md; }
@@ -2940,11 +2973,13 @@ const Send = {
       if(err.code !== 'storage/object-not-found') throw err;
     }
     const start = Send.bytesDone;
+    Send.setStage('Uploading');
     await new Promise((res, rej) => {
       const task = st.uploadBytesResumable(ref, blob, { contentType: type });
       Send.task = task;
       task.on('state_changed', snap => { Send.bytesDone = start + snap.bytesTransferred; paintSend(); }, rej, res);
     });
+    Send.setStage('Confirming the copy online');
     const md = await st.getMetadata(ref);
     if(+md.size !== blob.size) throw new Error('the online copy came back a different size');
     Send.bytesDone = start + blob.size;
@@ -3198,6 +3233,7 @@ function paintSend(){
     box.innerHTML = '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
       '<p class="hint" style="margin:0">Sending photo ' + Math.min(Send.done + 1, Send.total) + ' of ' + Send.total + ' · ' +
       fmtBytes(Send.bytesDone) + ' of ' + fmtBytes(Send.bytesTotal) + '</p>' +
+      (Send.stage ? '<p class="hint" id="sendStage" style="margin:4px 0 0">' + esc(Send.stage) + ' · ' + Math.floor((Date.now() - Send.stageAt) / 1000) + ' s</p>' : '') +
       '<button class="btn full" id="sendStop" style="margin-top:8px">Stop</button>';
     $('#sendStop').onclick = () => Send.stop();
     const b = $('#acSend'); if(b) b.disabled = true;
