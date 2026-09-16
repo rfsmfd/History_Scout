@@ -5,7 +5,7 @@
      - libraries + map tiles: CACHE FIRST
        => tiles you've already looked at keep working with no signal
    Bump BUILD to match index.html when you ship.  */
-const BUILD = 19;
+const BUILD = 20;
 const APP   = 'hs-app-v' + BUILD;
 const LIB   = 'hs-lib-v1';
 const TILES = 'hs-tiles-v1';
@@ -74,6 +74,13 @@ self.addEventListener('fetch', e => {
         code. Checking sw.js first means no mistake further down can ever route it
         into the cache again. Fixed in BUILD 8. */
   if (url.origin === location.origin && url.pathname.endsWith('sw.js')) return;
+
+  /* 0b. BUILD 20: the camera test page is not the app. Rule 1 treats every other .html here as the app itself.
+        Tested with BUILD 19's worker in control: with signal the test page DID appear — but the shell rule then
+        saved it under ./ and ./index.html, so History Scout opened as the camera test page the next time it had
+        no signal (and, with no signal at the test page itself, the app would have appeared instead). So it is
+        left entirely to the network: never answered as the app, never saved. */
+  if (url.origin === location.origin && url.pathname.endsWith('/camera-test.html')) return;
 
   // 1. the app shell — network first. CALL it: a bare `isAppItself` is always true.
   if (isAppItself(req, url)) {
