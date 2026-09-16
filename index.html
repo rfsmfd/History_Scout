@@ -641,7 +641,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 28;
+const BUILD = 29;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -2649,7 +2649,7 @@ async function putSite(site, keys){
   if(keys && keys.length) Sync.soon();
 }
 async function putPhoto(p, keys){
-  if(!(p.up && p.up.done) && !p.deleted) setTimeout(() => Send.soon(), 0);   // BUILD 28: straight to the account
+  if(!p.deleted && (!(p.up && p.up.done) || Send.editsWaiting(p))) setTimeout(() => Send.soon(), 0);   // BUILD 28/29: photos and edits straight to the account
   if(keys && keys.length){
     const t = now(); p._t = p._t || {};
     for(const k of keys) p._t[k] = t;
@@ -2980,7 +2980,9 @@ const Send = {
   setStage(words){ Send.stage = words; Send.stageAt = Date.now(); paintSend(); },
 
   editsWaiting(p){ return editFiles(p).filter(f => !((p.up && p.up.edits) || []).some(u => u.name === f.name && u.size === f.size)).length; },
-  pending(){ return [...S.all.photos.values()].filter(p => !p.deleted && (!(p.up && p.up.done) || Send.editsWaiting(p)) && hasLocal(p) &&
+  pending(){ return [...S.all.photos.values()].filter(p => !p.deleted &&
+                     /* BUILD 29: an unsent photo needs its original here; a SENT photo edited on the PC needs only the edit here */
+                     ((!(p.up && p.up.done) && hasLocal(p)) || (p.up && p.up.done && Send.editsWaiting(p) && editFiles(p).some(hasFile))) &&
                      S.all.sites.has(p.siteId) && !S.all.sites.get(p.siteId).deleted); },
   pendingBytes(){ return Send.pending().reduce((a, p) => a + ((p.up && p.up.done) ? 0 : (origFile(p).size || 0) + (p.display ? p.display.size : 0)) +
     editFiles(p).filter(f => !((p.up && p.up.edits) || []).some(u => u.name === f.name && u.size === f.size)).reduce((b, f) => b + (f.size || 0), 0), 0); },
