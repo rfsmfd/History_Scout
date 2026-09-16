@@ -524,9 +524,12 @@ details.more[open] > summary::before{transform:rotate(90deg)}
         <h3>Storage</h3>
         <div class="kv"><span class="k">Sites</span><span class="v" id="stoSites">0</span></div>
         <div class="kv"><span class="k">Photos</span><span class="v" id="stoPhotos">0</span></div>
-        <div class="kv"><span class="k">Space used</span><span class="v" id="stoUsed">—</span></div>
-        <div class="kv" style="border:0"><span class="k">Space available</span><span class="v" id="stoQuota">—</span></div>
-        <p class="hint" style="margin:11px 0 0">Records live in this phone's browser storage. Installed to the home screen they survive normal use, but nothing is backed up to iCloud — <b>export after every trip.</b></p>
+        <div class="kv"><span class="k">All your photos, full size</span><span class="v" id="stoUsed">—</span></div>
+        <div class="kv"><span class="k">Space available</span><span class="v" id="stoQuota">—</span></div>
+        <div class="kv" style="border:0"><span class="k">Full-size photos kept on this phone</span><span class="v" id="stoLocal">—</span></div>
+        <p class="hint" style="margin:11px 0 0">Signed in, your records back themselves up, and <b>Send</b> puts your photos in your account. Once they are safely there, free up the space they take on this phone — the small copies stay, so everything looks the same.</p>
+        <button class="btn full" id="btnFree" style="margin-top:10px">🧹 Free up space on this phone</button>
+        <p class="hint" id="freeNote" style="margin:8px 0 0"></p>
       </div>
 
       <div class="card">
@@ -632,7 +635,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 24;
+const BUILD = 25;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -2242,6 +2245,7 @@ function exportReadme(nSites, nPhotos, reduced, missing, nSensitive, hasOwners){
   return lines.filter(l => l !== null).join('\r\n') + '\r\n';
 }
 
+$('#btnFree').onclick = freeSpace;
 $('#btnExportZip').onclick = () => {
   const n = S.sites.filter(isUnsorted).length;
   if(n) toast(n + ' place' + (n === 1 ? '' : 's') + ' in Unsorted left out — sort ' + (n === 1 ? 'it' : 'them') + ' first', 3200);
@@ -2312,6 +2316,12 @@ async function paintStorage(){
   $('#stoSites').textContent  = S.sites.length;
   $('#stoPhotos').textContent = S.photos.length;
   $('#stoUsed').textContent   = fmtBytes(S.photos.reduce((a,p)=>a+(p.size||0),0));
+  $('#stoLocal').textContent  = fmtBytes(localBytes());
+  const can = freeableBytes();
+  $('#btnFree').disabled = !can || Free.running;
+  $('#freeNote').textContent = can ? fmtBytes(can) + ' can be freed — photos already safely in your account' + (S.acct.state === 'ok' ? '.' : ' (it needs you signed in, with signal).')
+    : S.acct.mode === 'account' ? 'Nothing to free yet. Photos can be removed from this phone only after Send has put them safely in your account.'
+    : 'Sign in and Send your photos first — only photos safely in your account can be removed from this phone.';
   try{
     if(navigator.storage && navigator.storage.estimate){
       const e = await navigator.storage.estimate();
@@ -2860,7 +2870,8 @@ const Send = {
         ? (Send.cancel || (Send.err.code === 'storage/canceled') ? 'Stopped. ' : 'Stopped: ' + (Send.err.message || Send.err.code) + ' ') +
           Send.done + ' of ' + Send.total + ' sent — press Send again to carry on.'
         : Send.cancel ? 'Stopped. ' + Send.done + ' of ' + Send.total + ' sent — press Send again to carry on.'
-        : 'All ' + Send.done + ' photo' + (Send.done === 1 ? '' : 's') + ' sent and confirmed.';
+        : 'All ' + Send.done + ' photo' + (Send.done === 1 ? '' : 's') + ' sent and confirmed.' +
+          (freeableBytes() ? ' You can now free up ' + fmtBytes(freeableBytes()) + ' on this phone — More → Storage.' : '');   // BUILD 25
       paintSend(); paintAcct(); paintSyncLine();
       toast(Send.lastResult, 3600);
     }
@@ -2921,6 +2932,63 @@ const Send = {
 
   stop(){ Send.cancel = true; if(Send.task){ try{ Send.task.cancel(); }catch(e){} } }
 };
+
+/* ---------- BUILD 25: free up space on this phone ----------
+   A photo's full-size file is removed from this device only when Send has recorded it as sent (edited versions too),
+   its small screen copy is here, and Google confirms right now that the copy in the account is there at exactly the
+   right size. The small copy stays, so records look the same; opening full size, exporting, and Bring in new fetch the
+   original back from the account. Edited versions stay on the phone. The iPhone's Photos app is never touched. */
+const Free = { running: false };
+const freeable = p => !p.deleted && !!(p.up && p.up.done && p.up.orig) && hasLocal(p) && !!p.display &&
+  (p.files || []).some(f => f.role === 'original' && f.blob) &&
+  Send.editsWaiting(p) === 0 && origFile(p).blob.size === p.up.orig.size;
+const freeablePhotos = () => [...S.all.photos.values()].filter(freeable);
+const freeableBytes = () => freeablePhotos().reduce((a, p) => a + origFile(p).blob.size, 0);
+const localBytes = () => S.photos.reduce((a, p) => a + (hasLocal(p) ? origFile(p).blob.size : 0), 0);   // the same photos as 'All your photos'
+
+function freeSpace(){
+  if(Free.running) return;
+  const list = freeablePhotos();
+  if(!list.length){ toast('Nothing to free yet — photos can be removed only after Send has put them safely online', 3800); return; }
+  if(S.acct.state !== 'ok' || !FB.m){ toast('Sign in, with signal — each photo is checked online before it is removed', 3800); return; }
+  const bytes = list.reduce((a, p) => a + origFile(p).blob.size, 0);
+  openSheet('<h2>Free up ' + fmtBytes(bytes) + '?</h2>' +
+    '<p class="hint">' + list.length + ' photo' + (list.length === 1 ? ' is' : 's are') + ' safely in your account. Their full-size files will be removed from this phone one at a time — each only after Google confirms its online copy is there and complete.</p>' +
+    '<ul class="bi-report">' +
+      '<li>The small copies stay, so every site and picture looks the same.</li>' +
+      '<li>Opening a photo full size, exporting it, or <b>Bring in new</b> on the PC fetches the full-size file back from your account. That needs signal.</li>' +
+      '<li>Photos not yet sent, and edited versions, are kept on this phone.</li>' +
+      '<li>Your iPhone\'s Photos app is not touched — delete those pictures there yourself.</li>' +
+    '</ul>' +
+    '<button class="btn pri full" id="freeGo" style="margin-top:6px">🧹 Free up ' + fmtBytes(bytes) + '</button>' +
+    '<button class="btn full" id="freeNo" style="margin-top:8px">Not now</button>');
+  $('#freeNo').onclick = closeSheet;
+  $('#freeGo').onclick = async () => {
+    Free.running = true;
+    const btn = $('#freeGo'); btn.disabled = true; $('#freeNo').disabled = true;
+    let freed = 0, bytesFreed = 0, kept = 0, why = '';
+    const st = FB.m.st;
+    try{
+      for(const p of list){
+        btn.textContent = '⏳ checking ' + (freed + kept + 1) + ' of ' + list.length + '…';
+        try{
+          if(!freeable(p)){ kept++; continue; }                         // something changed meanwhile
+          const md = await st.getMetadata(st.ref(FB.st, p.up.orig.path));
+          const o = (p.files || []).find(f => f.role === 'original');
+          if(!o || !o.blob || +md.size !== o.blob.size){ kept++; why = why || 'an online copy was not the right size'; continue; }
+          const size = o.blob.size;
+          o.blob = null; o.freed = now();
+          await putPhoto(p);                                           // this device only: photo files never go online with the record
+          freed++; bytesFreed += size;
+        }catch(err){ kept++; why = why || (err.code === 'storage/object-not-found' ? 'an online copy was missing' : 'no signal or no answer'); }
+      }
+    } finally {
+      Free.running = false;
+      closeSheet(); refreshAll(); paintStorage();
+    }
+    toast('Freed ' + fmtBytes(bytesFreed) + ' — ' + freed + ' photo' + (freed === 1 ? '' : 's') + (kept ? ' · ' + kept + ' kept (' + why + ')' : ''), 4600);
+  };
+}
 
 /* ---------- photos taken on the other device ----------
    Their records arrive at once; the pictures only once the phone has sent them. The screen-sized
