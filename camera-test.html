@@ -22,8 +22,8 @@
   .lede{color:var(--ink2);font-size:16px}
   .card{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px}
   button{font:inherit;cursor:pointer;border:0;border-radius:13px;min-height:50px;padding:12px 18px;font-weight:700}
+  button:disabled{opacity:.55}
   .pri{background:var(--accent);color:#FFF6E4;width:100%;font-size:19px;box-shadow:0 3px 0 #5C3506}
-  .pri:disabled{opacity:.55}
   .sec{background:var(--bg3);color:var(--ink);border:1px solid var(--line)}
   .row{display:flex;gap:10px;flex-wrap:wrap}
   .row > button{flex:1 1 150px}
@@ -45,9 +45,9 @@
   .shot{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:6px;text-align:left;font-weight:400;min-height:0}
   .shot img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block;background:var(--bg3)}
   .shot span{display:block;font-size:14px;line-height:1.35;color:var(--ink2);margin-top:5px}
-  video{width:100%;border-radius:12px;background:#15110D;display:block}
+  video{width:100%;border-radius:12px;background:#15110D;display:block;margin-top:10px}
   input[type=range]{width:100%;height:44px}
-  .err{background:#F3DCD6;border:1px solid var(--bad);color:var(--bad);border-radius:12px;padding:12px;margin:10px 0}
+  .err{background:#F3DCD6;border:1px solid var(--bad);color:var(--bad);border-radius:12px;padding:12px;margin:0 0 12px}
   .note{font-size:15px;color:var(--ink3)}
   #viewer{position:fixed;inset:0;background:rgba(21,17,13,.96);z-index:10;display:none;flex-direction:column}
   #viewer.on{display:flex}
@@ -64,28 +64,14 @@
 <p class="lede">What your iPhone lets <b>History Scout</b> — a website — do with its camera. This page changes nothing in History Scout and saves nothing. It only asks the camera, and shows you the answers.</p>
 
 <div class="card">
-  <p><b>Before you start:</b> open this page in <b>Safari</b>, go outside or near a window, and point the phone at something with detail — a sign, a building, a tree line. The test takes about half a minute and switches between the phone's lenses on its own.</p>
+  <p><b>Before you start:</b> go outside or near a window and point the phone at something with detail — a sign, a building, a tree line. Allow the camera when Safari asks. The test takes about half a minute and switches between the phone's lenses on its own; its progress shows right below.</p>
   <button class="pri" id="go">▶ Start the test</button>
-</div>
-
-<div class="card" id="loopCard">
-  <p style="margin-bottom:6px"><b>Also: does the camera reopen by itself?</b></p>
-  <p class="note">This uses the same camera as History Scout's Capture button. Tap below, take a picture, tap <b>Use Photo</b> — then watch what happens.</p>
-  <button class="sec" id="loopGo" style="width:100%">📷 Take a picture</button>
-  <input type="file" id="loopCam" accept="image/*" capture="environment" style="display:none">
-  <div id="loopAsk" hidden style="margin-top:12px">
-    <p><b>Did the camera open again on its own?</b></p>
-    <div class="row"><button class="sec" id="loopYes">Yes, it opened again</button><button class="sec" id="loopNo">No — I'm back on this page</button></div>
-  </div>
-  <p id="loopResult" hidden style="margin:12px 0 0"></p>
 </div>
 
 <div id="errBox" hidden></div>
 
 <div id="progress" hidden>
-  <h2>Working</h2>
-  <div class="card"><ol class="steps" id="steps"></ol></div>
-  <video id="vid" playsinline muted autoplay></video>
+  <div class="card"><ol class="steps" id="steps"></ol><video id="vid" playsinline muted autoplay></video></div>
 </div>
 
 <div id="results" hidden>
@@ -101,8 +87,8 @@
     <div class="card">
       <button class="sec" id="tryOpen" style="width:100%">🔍 Open the camera with a zoom slider</button>
       <div id="tryLive" hidden>
-        <video id="tryVid" playsinline muted autoplay style="margin:12px 0 6px"></video>
-        <label for="zoom" style="font-weight:700">Zoom <span id="zoomVal">1×</span></label>
+        <video id="tryVid" playsinline muted autoplay></video>
+        <label for="zoom" style="font-weight:700;display:block;margin-top:8px">Zoom <span id="zoomVal">1×</span></label>
         <input type="range" id="zoom" min="1" max="1" step="0.1" value="1">
         <div class="row" style="margin-top:8px">
           <button class="sec" id="trySnap">📷 Take a picture</button>
@@ -119,95 +105,133 @@
   <h2>Send me the results</h2>
   <div class="card">
     <p>Tap below, then paste it into your message to Claude. A screenshot of this page works too.</p>
-    <div class="row"><button class="pri" id="copy" style="flex:1 1 100%">📋 Copy the results</button></div>
+    <button class="pri" id="copy">📋 Copy the results</button>
     <p class="note" id="copied" style="margin:8px 0 0" hidden>Copied.</p>
   </div>
+</div>
+
+<h2>A separate check</h2>
+<div class="card" id="loopCard">
+  <p style="margin-bottom:6px"><b>Does Apple's camera reopen by itself?</b></p>
+  <p class="note">This uses the same camera as History Scout's Capture button. Tap below, take a picture, tap <b>Use Photo</b> — then watch what happens.</p>
+  <button class="sec" id="loopGo" style="width:100%">📷 Take a picture</button>
+  <input type="file" id="loopCam" accept="image/*" capture="environment" style="display:none">
+  <div id="loopAsk" hidden style="margin-top:12px">
+    <p><b>Did the camera open again on its own?</b></p>
+    <div class="row"><button class="sec" id="loopYes">Yes, it opened again</button><button class="sec" id="loopNo">No — I'm back on this page</button></div>
+  </div>
+  <p id="loopResult" hidden style="margin:12px 0 0"></p>
 </div>
 
 <div id="viewer"><div class="bar"><span id="vCap"></span><button class="sec" id="vDone">Done</button></div><div class="pic"><img id="vImg" alt=""></div></div>
 
 <script>
 /* Camera test for History Scout — asks the phone's camera what a website may use, and records the answers.
-   Nothing is stored and nothing is sent anywhere; the pictures exist only in this page until it is closed. */
+   Nothing is stored and nothing is sent anywhere; the pictures exist only in this page until it is closed.
+
+   Second version, after his first try on 2026-09-16: "Start the test didn't do shit. It occurred when I hit Take
+   Picture." The progress list sat below the other card, out of sight, so the running test looked dead; tapping that
+   card's camera while the test held the camera crashed Safari. Now: progress directly under Start, the two cameras
+   can never run at once, every failure is said on the page, and memory is kept low (one reused drawing surface,
+   small previews, burst frames released as soon as they are counted). */
 (() => {
   const $ = s => document.querySelector(s);
-  const R = { ua: navigator.userAgent, imageCapture: 'ImageCapture' in window, cams: [], shots: [], burst: null, errors: [] };
-  let stream = null;
+  const R = { ua: navigator.userAgent, imageCapture: 'ImageCapture' in window, cams: [], shots: [], burst: null, errors: [], loop: null, loopTry: null };
+  let stream = null, busy = false;
+  const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
 
-  const stopAll = () => { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } };
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const mp = (w, h) => (w * h / 1e6).toFixed(1);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const nextFrame = () => new Promise(r => { let d = false; const go = () => { if (!d){ d = true; r(); } }; requestAnimationFrame(go); setTimeout(go, 60); });
 
+  function fail(html){ const b = $('#errBox'); b.hidden = false; b.innerHTML = '<div class="err">' + html + '</div>'; b.scrollIntoView({ block: 'nearest' }); }
+  window.addEventListener('error', e => fail('<b>Something went wrong in the test page:</b> ' + esc(e.message || 'unknown error')));
+  window.addEventListener('unhandledrejection', e => fail('<b>Something went wrong in the test page:</b> ' + esc((e.reason && (e.reason.message || e.reason)) || 'unknown error')));
+
+  function stopAll(){
+    if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+    ['#vid', '#tryVid'].forEach(id => { const v = $(id); if (v) v.srcObject = null; });
+  }
+  function setBusy(on, label){
+    busy = on;
+    $('#go').disabled = on;
+    $('#go').textContent = on ? (label || 'Testing… allow the camera if Safari asks') : '↻ Run the test again';
+    $('#loopGo').disabled = on;
+    $('#tryOpen').disabled = on;
+  }
   function step(text){
     const li = document.createElement('li'); li.textContent = text; li.className = 'now';
     $('#steps').appendChild(li);
     return { ok: t => { li.className = 'ok'; if (t) li.textContent = t; }, bad: t => { li.className = 'bad'; if (t) li.textContent = t; } };
   }
-  function fail(html){ const b = $('#errBox'); b.hidden = false; b.innerHTML = '<div class="err">' + html + '</div>'; }
 
-  async function open(video, deviceId, w, h){
+  async function open(video, deviceId){
     stopAll();
-    const v = { width: { ideal: w }, height: { ideal: h } };
+    const v = { width: { ideal: 4032 }, height: { ideal: 3024 } };
     if (deviceId) v.deviceId = { exact: deviceId }; else v.facingMode = { ideal: 'environment' };
-    stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: v });
+    const req = navigator.mediaDevices.getUserMedia({ audio: false, video: v });
+    let late = false;
+    req.then(s => { if (late) s.getTracks().forEach(t => t.stop()); }).catch(() => {});   // never leave the camera on after giving up
+    stream = await Promise.race([req, sleep(15000).then(() => { late = true; throw new Error('The camera did not answer within 15 seconds.'); })]);
     video.srcObject = stream;
-    try { const p = video.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {}   // not awaited: it can stall unseen; the size check below is the real wait
+    try { const p = video.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
     for (let i = 0; i < 50 && !(video.videoWidth > 0); i++) await sleep(100);
-    await sleep(600);                                    // let exposure and focus settle
+    await sleep(600);                                        // let exposure and focus settle
     return stream.getVideoTracks()[0];
   }
 
+  /* One full-size picture kept as a compressed file (decoded only when you tap it), plus a small preview for the page. */
   async function grab(video, label){
     const w = video.videoWidth, h = video.videoHeight;
     if (!w) return null;
-    const c = document.createElement('canvas'); c.width = w; c.height = h;
-    c.getContext('2d').drawImage(video, 0, 0, w, h);
-    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
-    const shot = { label, w, h, kb: blob ? Math.round(blob.size / 1024) : 0, url: blob ? URL.createObjectURL(blob) : '' };
+    canvas.width = w; canvas.height = h; ctx.drawImage(video, 0, 0, w, h);
+    const full = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+    const k = Math.min(1, 480 / Math.max(w, h)), tw = Math.round(w * k), th = Math.round(h * k);
+    const tc = document.createElement('canvas'); tc.width = tw; tc.height = th; tc.getContext('2d').drawImage(canvas, 0, 0, tw, th);
+    const thumb = await new Promise(r => tc.toBlob(r, 'image/jpeg', 0.8));
+    tc.width = tc.height = 1; canvas.width = canvas.height = 1;          // hand the drawing memory straight back
+    const shot = { label, w, h, full, thumbUrl: thumb ? URL.createObjectURL(thumb) : '' };
     R.shots.push(shot); paintShots();
     return shot;
   }
 
   const caps = t => { try { return t.getCapabilities ? t.getCapabilities() : null; } catch (e) { return null; } };
-  const sets = t => { try { return t.getSettings ? t.getSettings() : {}; } catch (e) { return {}; } };
 
   async function run(){
-    $('#go').disabled = true; $('#errBox').hidden = true;
-    $('#progress').hidden = false; $('#results').hidden = true;
-    $('#steps').innerHTML = ''; R.cams = []; R.shots = []; R.burst = null; R.errors = []; paintShots();
+    if (busy) return;
+    $('#errBox').hidden = true; $('#results').hidden = true; $('#progress').hidden = false;
+    $('#steps').innerHTML = ''; R.cams = []; R.shots.forEach(s => s.thumbUrl && URL.revokeObjectURL(s.thumbUrl)); R.shots = []; R.burst = null; R.errors = []; paintShots();
     const video = $('#vid');
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
       fail('<b>This browser will not share the camera with a web page.</b> Open this page in Safari itself — not inside another app — and try again.');
-      $('#go').disabled = false; return;
+      return;
     }
+    setBusy(true);
+    try {
+      let s = step('Asking permission to use the camera…');
+      try { await open(video, null); s.ok('Camera permission given'); }
+      catch (e){
+        s.bad('The camera was not shared');
+        fail('<b>The camera was not shared.</b> In Safari, tap <b>aA</b> in the address bar → <b>Website Settings</b> → <b>Camera</b> → <b>Allow</b>, then tap Start again. If another app is using the camera, close it first.<br><span class="note">(' + esc(e.name + ': ' + e.message) + ')</span>');
+        return;
+      }
 
-    let s = step('Asking permission to use the camera…');
-    try { await open(video, null, 1920, 1080); s.ok('Camera permission given'); }
-    catch (e){
-      s.bad('Camera permission refused or unavailable');
-      fail('<b>The camera was not shared.</b> In Safari, tap <b>aA</b> in the address bar → <b>Website Settings</b> → <b>Camera</b> → <b>Allow</b>, then tap Start again.<br><span class="note">(' + esc(e.name + ': ' + e.message) + ')</span>');
-      stopAll(); $('#go').disabled = false; return;
-    }
+      s = step('Listing the cameras a website can see…');
+      let devices = [];
+      try { devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); }
+      catch (e){ R.errors.push('enumerateDevices: ' + e.message); }
+      s.ok(devices.length + ' camera' + (devices.length === 1 ? '' : 's') + ' listed');
 
-    s = step('Listing the cameras a website can see…');
-    let devices = [];
-    try { devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); }
-    catch (e){ R.errors.push('enumerateDevices: ' + e.message); }
-    s.ok(devices.length + ' camera' + (devices.length === 1 ? '' : 's') + ' listed');
-
-    for (let i = 0; i < devices.length; i++){
-      const d = devices[i];
-      const name = d.label || ('Camera ' + (i + 1));
-      const front = /front/i.test(name);
-      const cam = { name, front, sizes: [], zoom: null, torch: false, focus: '', exposure: '', lensLabel: '' };
-      R.cams.push(cam);
-      s = step('Opening ' + name + '…');
-      try {
-        for (const [w, h] of [[4032, 3024], [3840, 2160]]){
-          const t = await open(video, d.deviceId, w, h);
-          cam.sizes.push([video.videoWidth, video.videoHeight]);
+      for (let i = 0; i < devices.length; i++){
+        const d = devices[i], name = d.label || ('Camera ' + (i + 1)), front = /front/i.test(name);
+        const cam = { name, front, deviceId: d.deviceId, best: null, zoom: null, torch: false, focus: '', capMax: null };
+        R.cams.push(cam);
+        s = step('Opening ' + name + '…');
+        try {
+          const t = await open(video, d.deviceId);
+          cam.best = [video.videoWidth, video.videoHeight];
           const c = caps(t);
           if (c){
             if (c.zoom && typeof c.zoom.max === 'number') cam.zoom = { min: c.zoom.min, max: c.zoom.max, step: c.zoom.step };
@@ -215,66 +239,61 @@
             if (c.focusMode) cam.focus = [].concat(c.focusMode).join(', ');
             if (c.width && c.height) cam.capMax = [c.width.max, c.height.max];
           }
-        }
-        const best = cam.sizes.reduce((a, b) => b[0] * b[1] > a[0] * a[1] ? b : a, [0, 0]);
-        cam.best = best;
-        s.ok(name + ' — largest picture ' + best[0] + ' × ' + best[1] + ' (' + mp(best[0], best[1]) + ' MP)');
-
-        if (!front){
-          // a picture at the largest size this lens gave
-          const [w, h] = cam.sizes[0][0] * cam.sizes[0][1] >= cam.sizes[1][0] * cam.sizes[1][1] ? [4032, 3024] : [3840, 2160];
-          const t = await open(video, d.deviceId, w, h);
-          await grab(video, name);
-          if (cam.zoom && cam.zoom.max > cam.zoom.min){
-            const levels = [...new Set([cam.zoom.min, 2, 3, 5, 8, cam.zoom.max].filter(z => z >= cam.zoom.min && z <= cam.zoom.max))].sort((a, b) => a - b);
-            const zs = step('Zooming ' + name + ' — ' + levels.map(z => z + '×').join(', ') + '…');
-            for (const z of levels){
-              try { await t.applyConstraints({ advanced: [{ zoom: z }] }); await sleep(900); await grab(video, name + ' · zoom ' + z + '×'); }
-              catch (e){ R.errors.push(name + ' zoom ' + z + ': ' + e.message); }
+          s.ok(name + ' — ' + cam.best[0] + ' × ' + cam.best[1] + ' (' + mp(cam.best[0], cam.best[1]) + ' MP)');
+          if (!front){
+            await grab(video, name);
+            if (cam.zoom && cam.zoom.max > cam.zoom.min){
+              const levels = [...new Set([cam.zoom.min, 2, 5, cam.zoom.max].filter(z => z >= cam.zoom.min && z <= cam.zoom.max))].sort((a, b) => a - b);
+              const zs = step('Zooming ' + name + ' — ' + levels.map(z => z + '×').join(', ') + '…');
+              for (const z of levels){
+                try { await t.applyConstraints({ advanced: [{ zoom: z }] }); await sleep(900); await grab(video, name + ' · zoom ' + z + '×'); }
+                catch (e){ R.errors.push(name + ' zoom ' + z + ': ' + e.message); }
+              }
+              zs.ok('Zoomed ' + name + ' from ' + cam.zoom.min + '× to ' + cam.zoom.max + '×');
             }
-            zs.ok('Zoomed ' + name + ' from ' + cam.zoom.min + '× to ' + cam.zoom.max + '×');
           }
+        } catch (e){
+          s.bad(name + ' — could not be opened');
+          R.errors.push(name + ': ' + e.name + ' ' + e.message);
         }
-      } catch (e){
-        s.bad(name + ' — could not be opened');
-        R.errors.push(name + ': ' + e.name + ' ' + e.message);
       }
-    }
 
-    /* Burst, measured as a real in-app camera would work: grab the pictures as fast as possible, and save
-       them afterwards in the background. Two numbers — how fast you can shoot, and how long each takes to save.
-       Six pictures, not more: each full-size frame held in memory is large. */
-    const back = R.cams.filter(c => !c.front && c.best).sort((a, b) => b.best[0] * b.best[1] - a.best[0] * a.best[1])[0];
-    if (back){
-      s = step('Burst — 6 pictures as fast as possible from ' + back.name + '…');
-      try {
-        const dev = devices.find(d => (d.label || '') === back.name) || devices[0];
-        await open(video, dev.deviceId, back.best[0], back.best[1]);
-        const w = video.videoWidth, h = video.videoHeight, frames = [], N = 6;
-        const t0 = performance.now();
-        for (let i = 0; i < N; i++){
-          if (window.createImageBitmap) frames.push(await createImageBitmap(video));
-          else { const k = document.createElement('canvas'); k.width = w; k.height = h; k.getContext('2d').drawImage(video, 0, 0, w, h); frames.push(k); }
-          // the next new frame, not the same one twice — with a fallback, because a hidden page or a dimmed
-          // screen never draws another frame and the test would wait forever
-          await new Promise(r => { let done = false; const go = () => { if (!done){ done = true; r(); } }; requestAnimationFrame(go); setTimeout(go, 60); });
-        }
-        const grabMs = performance.now() - t0;
-        const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
-        const t1 = performance.now();
-        for (const f of frames){ g.drawImage(f, 0, 0, w, h); await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92)); if (f.close) f.close(); }
-        const saveMs = performance.now() - t1;
-        R.burst = { n: N, grabMs: Math.round(grabMs), saveEachMs: Math.round(saveMs / N), w, h };
-        s.ok('Burst — ' + N + ' pictures in ' + (grabMs / 1000).toFixed(1) + ' s; each took ' + (saveMs / N / 1000).toFixed(1) + ' s to save afterwards');
-      } catch (e){ s.bad('Burst could not run'); R.errors.push('burst: ' + e.message); }
-    }
+      /* Burst, measured the way a real in-app camera would work: how fast pictures can be grabbed, and — separately —
+         how long one takes to save. Frames are released the moment they are counted, so memory stays low. */
+      const back = R.cams.filter(c => !c.front && c.best).sort((a, b) => b.best[0] * b.best[1] - a.best[0] * a.best[1])[0];
+      if (back){
+        s = step('Burst — 6 pictures as fast as possible from ' + back.name + '…');
+        try {
+          await open(video, back.deviceId);
+          const w = video.videoWidth, h = video.videoHeight, N = 6;
+          let bitmaps = !!window.createImageBitmap;
+          const t0 = performance.now();
+          for (let i = 0; i < N; i++){
+            if (bitmaps){
+              try { const b = await createImageBitmap(video); if (b.close) b.close(); }
+              catch (e){ bitmaps = false; }
+            }
+            if (!bitmaps){ canvas.width = w; canvas.height = h; ctx.drawImage(video, 0, 0, w, h); }
+            await nextFrame();
+          }
+          const grabMs = performance.now() - t0;
+          canvas.width = w; canvas.height = h; ctx.drawImage(video, 0, 0, w, h);
+          const t1 = performance.now(); await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92)); const saveMs = performance.now() - t1;
+          canvas.width = canvas.height = 1;
+          R.burst = { n: N, grabMs: Math.round(grabMs), saveEachMs: Math.round(saveMs), w, h };
+          s.ok('Burst — ' + N + ' pictures in ' + (grabMs / 1000).toFixed(1) + ' s; each takes ' + (saveMs / 1000).toFixed(1) + ' s to save');
+        } catch (e){ s.bad('Burst could not run'); R.errors.push('burst: ' + e.message); }
+      }
 
-    stopAll();
-    step('Camera switched off').ok();
-    $('#vid').srcObject = null;
-    paint();
-    $('#results').hidden = false; $('#go').disabled = false; $('#go').textContent = '↻ Run the test again';
-    $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      stopAll();
+      step('Camera switched off').ok();
+      paint();
+      $('#results').hidden = false;
+      $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } finally {
+      stopAll();
+      setBusy(false);
+    }
   }
 
   function paint(){
@@ -288,10 +307,10 @@
     h += row('Cameras a website can use', R.cams.length ? R.cams.map(c => esc(c.name)).join(' · ') : '<span class="no">None listed</span>');
     h += row('The real telephoto lens', tele ? '<span class="yes">Yes</span> — “' + esc(tele.name) + '” can be picked on its own' : '<span class="no">Not offered on its own</span>');
     h += row('Zoom control', zoomCam ? '<span class="yes">Yes</span> — ' + zoomCam.zoom.min + '× to ' + zoomCam.zoom.max + '× on ' + esc(zoomCam.name) : '<span class="no">Not offered</span> — only enlarging the picture afterwards');
-    h += row('Largest picture', biggest ? biggest.best[0] + ' × ' + biggest.best[1] + ' = <b>' + mp(biggest.best[0], biggest.best[1]) + ' MP</b> on ' + esc(biggest.name) + '<br><span class="note">Your Camera app: about 24 MP.</span>' : '<span class="no">None</span>');
+    h += row('Largest picture', biggest ? biggest.best[0] + ' × ' + biggest.best[1] + ' = <b>' + mp(biggest.best[0], biggest.best[1]) + ' MP</b> on ' + esc(biggest.name) + '<br><span class="note">History Scout\'s Capture button gets 12 MP (4032 × 3024) on your phone — that is the number to beat.</span>' : '<span class="no">None</span>');
     h += row('Light', light ? '<span class="yes">Yes</span> — the flashlight can be turned on (a steady light, not a flash)' : '<span class="no">No</span>');
     h += row('Burst', R.burst ? '<b>' + (R.burst.n * 1000 / Math.max(1, R.burst.grabMs)).toFixed(1) + ' pictures a second</b> at ' + R.burst.w + ' × ' + R.burst.h +
-      '<br><span class="note">Each then took ' + (R.burst.saveEachMs / 1000).toFixed(1) + ' s to save, which a real in-app camera would do in the background while you keep shooting.</span>' : '<span class="maybe">Not measured</span>');
+      '<br><span class="note">Each takes ' + (R.burst.saveEachMs / 1000).toFixed(1) + ' s to save, which a real in-app camera would do in the background while you keep shooting.</span>' : '<span class="maybe">Not measured</span>');
     if (R.loop) h += row('Camera reopens by itself', esc(R.loop));
     if (R.errors.length) h += row('Problems', '<span class="maybe">' + R.errors.map(esc).join('<br>') + '</span>');
     $('#found').innerHTML = h;
@@ -303,25 +322,35 @@
   }
 
   function paintShots(){
-    $('#shots').innerHTML = R.shots.map((s, i) => '<button class="shot" data-i="' + i + '"><img src="' + s.url + '" alt=""><span>' + esc(s.label) + '<br>' + s.w + ' × ' + s.h + ' · ' + mp(s.w, s.h) + ' MP</span></button>').join('');
+    $('#shots').innerHTML = R.shots.map((s, i) => '<button class="shot" data-i="' + i + '"><img src="' + s.thumbUrl + '" alt=""><span>' + esc(s.label) + '<br>' + s.w + ' × ' + s.h + ' · ' + mp(s.w, s.h) + ' MP</span></button>').join('');
     document.querySelectorAll('.shot').forEach(b => b.onclick = () => {
       const s = R.shots[+b.dataset.i];
-      $('#vImg').src = s.url; $('#vCap').textContent = s.label + ' · ' + s.w + ' × ' + s.h;
+      if (!s || !s.full) return;
+      const img = $('#vImg');
+      if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+      img.dataset.url = URL.createObjectURL(s.full); img.src = img.dataset.url;
+      $('#vCap').textContent = s.label + ' · ' + s.w + ' × ' + s.h;
       $('#viewer').classList.add('on');
     });
   }
-  $('#vDone').onclick = () => $('#viewer').classList.remove('on');
+  $('#vDone').onclick = () => {
+    const img = $('#vImg');
+    $('#viewer').classList.remove('on');
+    img.removeAttribute('src');
+    if (img.dataset.url){ URL.revokeObjectURL(img.dataset.url); img.dataset.url = ''; }
+  };
 
   /* ---- try the zoom by hand ---- */
   let tryTrack = null, lightOn = false;
   $('#tryOpen').onclick = async () => {
-    const backs = R.cams.filter(c => !c.front);
+    if (busy) return;
+    const backs = R.cams.filter(c => !c.front && c.best);
     const zc = backs.filter(c => c.zoom && c.zoom.max > c.zoom.min).sort((a, b) => b.zoom.max - a.zoom.max)[0] || backs.find(c => /tele/i.test(c.name)) || backs[0];
     if (!zc) return;
-    const dev = (await navigator.mediaDevices.enumerateDevices()).find(d => d.kind === 'videoinput' && d.label === zc.name);
-    try { tryTrack = await open($('#tryVid'), dev && dev.deviceId, zc.best[0], zc.best[1]); }
-    catch (e){ fail('Could not open the camera again: ' + esc(e.message)); return; }
-    $('#tryLive').hidden = false; $('#tryOpen').hidden = true;
+    setBusy(true, 'The zoom slider is using the camera');
+    try { tryTrack = await open($('#tryVid'), zc.deviceId); }
+    catch (e){ setBusy(false); fail('Could not open the camera again: ' + esc(e.message)); return; }
+    $('#tryLive').hidden = false; $('#tryOpen').hidden = true; lightOn = false; $('#tryLight').textContent = '🔦 Light on';
     const z = $('#zoom');
     if (zc.zoom){ z.min = zc.zoom.min; z.max = zc.zoom.max; z.step = zc.zoom.step || 0.1; z.value = zc.zoom.min; z.disabled = false; }
     else { z.disabled = true; }
@@ -332,13 +361,44 @@
     $('#zoomVal').textContent = (+e.target.value).toFixed(1) + '×';
     if (tryTrack){ try { await tryTrack.applyConstraints({ advanced: [{ zoom: +e.target.value }] }); } catch (err) {} }
   };
-  $('#trySnap').onclick = async () => { const s = await grab($('#tryVid'), 'By hand · zoom ' + (+$('#zoom').value).toFixed(1) + '×'); if (s) $('#shots').scrollIntoView({ behavior: 'smooth' }); };
+  $('#trySnap').onclick = async () => { if (tryTrack){ const s = await grab($('#tryVid'), 'By hand · zoom ' + (+$('#zoom').value).toFixed(1) + '×'); if (s) $('#shots').scrollIntoView({ behavior: 'smooth' }); } };
   $('#tryLight').onclick = async () => {
+    if (!tryTrack) return;
     lightOn = !lightOn;
     try { await tryTrack.applyConstraints({ advanced: [{ torch: lightOn }] }); $('#tryLight').textContent = lightOn ? '🔦 Light off' : '🔦 Light on'; }
-    catch (e){ fail('The light would not turn on: ' + esc(e.message)); }
+    catch (e){ lightOn = !lightOn; fail('The light would not turn on: ' + esc(e.message)); }
   };
-  $('#tryDone').onclick = () => { stopAll(); tryTrack = null; $('#tryLive').hidden = true; $('#tryOpen').hidden = false; $('#tryVid').srcObject = null; };
+  $('#tryDone').onclick = () => { stopAll(); tryTrack = null; $('#tryLive').hidden = true; $('#tryOpen').hidden = false; setBusy(false); };
+
+  /* ---- does Apple's camera reopen by itself after Use Photo? ----
+     The same file-input camera as History Scout's Capture button. iPhone normally opens it only straight after a tap on
+     the page, and the Use Photo tap is on Apple's screen. So it tries once, a moment after the camera has closed (asking
+     while it is still closing may upset Safari), and records what happened. A second picture arriving proves it reopened. */
+  let loopShots = 0;
+  const loopSay = (text, cls) => { const r = $('#loopResult'); r.hidden = false; r.className = cls; r.textContent = text; R.loop = text; };
+  $('#loopGo').onclick = () => {
+    if (busy){ fail('Wait until the test above finishes — it is using the camera.'); return; }
+    stopAll(); loopShots = 0; $('#loopResult').hidden = true; $('#loopAsk').hidden = true;
+    $('#loopCam').click();
+  };
+  $('#loopCam').onchange = () => {
+    const got = $('#loopCam').files && $('#loopCam').files.length;
+    $('#loopCam').value = '';
+    if (!got) return;
+    loopShots++;
+    if (loopShots === 1){
+      setTimeout(() => {
+        try { $('#loopCam').click(); R.loopTry = 'tried 0.3 s after Use Photo'; }
+        catch (e){ R.loopTry = 'refused: ' + e.message; }
+        setTimeout(() => { $('#loopAsk').hidden = false; }, 400);
+      }, 300);
+    } else {
+      $('#loopAsk').hidden = true;
+      loopSay('Yes — the camera reopened by itself (a second picture came back without a tap).', 'yes');
+    }
+  };
+  $('#loopYes').onclick = () => { $('#loopAsk').hidden = true; loopSay('Yes — the camera reopened by itself after Use Photo.', 'yes'); };
+  $('#loopNo').onclick  = () => { $('#loopAsk').hidden = true; loopSay('No — after Use Photo it came back to the page; a tap is needed each time.', 'no'); };
 
   /* ---- copy the results as plain text ---- */
   $('#copy').onclick = async () => {
@@ -346,16 +406,16 @@
     L.push('HISTORY SCOUT CAMERA TEST — ' + new Date().toLocaleString());
     L.push('Phone: ' + R.ua);
     L.push('ImageCapture available: ' + (R.imageCapture ? 'yes' : 'no'));
-    L.push('Camera reopens by itself after Use Photo: ' + (R.loop || 'not tried') + (R.loopTry ? '  [reopen attempt: ' + R.loopTry + ']' : ''));
+    L.push('Camera reopens by itself after Use Photo: ' + (R.loop || 'not tried') + (R.loopTry ? '  [' + R.loopTry + ']' : ''));
     for (const c of R.cams){
       L.push('');
       L.push(c.name + (c.front ? ' (front)' : ''));
-      L.push('  sizes given: ' + c.sizes.map(s => s[0] + 'x' + s[1]).join(', ') + (c.capMax ? '  (reports max ' + c.capMax[0] + 'x' + c.capMax[1] + ')' : ''));
+      L.push('  picture given: ' + (c.best ? c.best[0] + 'x' + c.best[1] : 'none') + (c.capMax ? '  (reports max ' + c.capMax[0] + 'x' + c.capMax[1] + ')' : ''));
       L.push('  zoom: ' + (c.zoom ? c.zoom.min + ' to ' + c.zoom.max + ' step ' + c.zoom.step : 'not offered'));
       L.push('  light: ' + (c.torch ? 'yes' : 'no') + '   focus: ' + (c.focus || 'not reported'));
     }
     L.push('');
-    L.push('Burst: ' + (R.burst ? R.burst.n + ' pictures grabbed in ' + R.burst.grabMs + ' ms at ' + R.burst.w + 'x' + R.burst.h + '; saving took ' + R.burst.saveEachMs + ' ms each' : 'not measured'));
+    L.push('Burst: ' + (R.burst ? R.burst.n + ' pictures grabbed in ' + R.burst.grabMs + ' ms at ' + R.burst.w + 'x' + R.burst.h + '; saving one took ' + R.burst.saveEachMs + ' ms' : 'not measured'));
     if (R.errors.length){ L.push(''); L.push('Problems:'); R.errors.forEach(e => L.push('  ' + e)); }
     const text = L.join('\n');
     try { await navigator.clipboard.writeText(text); }
@@ -365,31 +425,6 @@
     }
     $('#copied').hidden = false;
   };
-
-  /* ---- does the camera reopen by itself after Use Photo? ----
-     History Scout's Capture button opens the camera through a file input with capture. iPhone normally opens it only
-     straight after a tap on the page; the tap on Use Photo is on Apple's screen. So: try to reopen it from the moment
-     the picture comes back, with no tap, and record what happened. A second picture arriving is proof it reopened. */
-  let loopShots = 0;
-  const loopSay = (text, cls) => { const r = $('#loopResult'); r.hidden = false; r.className = cls; r.textContent = text; R.loop = text; };
-  $('#loopGo').onclick = () => { loopShots = 0; $('#loopResult').hidden = true; $('#loopAsk').hidden = true; $('#loopCam').click(); };
-  $('#loopCam').onchange = () => {
-    const got = $('#loopCam').files && $('#loopCam').files.length;
-    $('#loopCam').value = '';
-    if (!got) return;
-    loopShots++;
-    if (loopShots === 1){
-      let tried = 'tried';
-      try { $('#loopCam').click(); } catch (e){ tried = 'refused: ' + e.message; }
-      R.loopTry = tried;
-      setTimeout(() => { $('#loopAsk').hidden = false; }, 400);
-    } else {
-      $('#loopAsk').hidden = true;
-      loopSay('Yes — the camera reopened by itself (a second picture came back without a tap).', 'yes');
-    }
-  };
-  $('#loopYes').onclick = () => { $('#loopAsk').hidden = true; loopSay('Yes — the camera reopened by itself after Use Photo.', 'yes'); };
-  $('#loopNo').onclick  = () => { $('#loopAsk').hidden = true; loopSay('No — after Use Photo it came back to the page; a tap is needed each time.', 'no'); };
 
   $('#go').onclick = run;
   window.addEventListener('pagehide', stopAll);
