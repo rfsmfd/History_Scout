@@ -641,7 +641,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 32;
+const BUILD = 33;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -3496,11 +3496,11 @@ async function biLoad(){
   if(!(m && m.v)) return;
   const v = m.v;
   BI.one = v.one || null; BI.photos = v.photos || null; BI.records = v.records || null;
-  BI.names = v.names || {}; BI.path = v.path || '';
+  BI.names = v.names || {}; BI.path = v.path || ''; BI.snapSig = v.snapSig || '';
   BI.mode = v.mode || (v.one ? 'one' : (v.photos && v.records) ? 'split' : null);   // BUILD 12 saved no mode
 }
 const biSave = () => dbPut('meta', { k: 'folders', v: { mode: BI.mode, one: BI.one, photos: BI.photos,
-  records: BI.records, names: BI.names, path: BI.path } });
+  records: BI.records, names: BI.names, path: BI.path, snapSig: BI.snapSig || '' } });
 const biSet = () => BI.mode === 'one' ? !!BI.one : BI.mode === 'split' ? !!(BI.photos && BI.records) : false;
 
 /* Chrome remembers the folder itself, but not always the permission — it is asked for again after a
@@ -3628,8 +3628,10 @@ function biPending(){
   }
   const fresh = sortedSites().filter(s => !s.broughtIn).length;
   const changed = sortedSites().filter(s => s.broughtIn && recUpdated(s) > (s.broughtIn.listed || 0)).length;
-  return { photos: photos, waiting: waiting, fresh: fresh, changed: changed };
+  return { photos: photos, waiting: waiting, fresh: fresh, changed: changed, snap: siteSig() !== (BI.snapSig || '') };
 }
+/* BUILD 33: what the current-sites list says — which sites exist, with the parts ArcGIS files them by. */
+const siteSig = () => sortedSites().map(s => [s.id, s.name, s.category, s.lat, s.lon].join('|')).sort().join('\n');
 
 /* The photos list ArcGIS matches on: its tools pair a record with a file by NAME, so the file name is
    the column that matters. The path inside your folder is there for you; the full path only if you
@@ -3725,6 +3727,17 @@ async function bringInNew(btn, opts){
       await biWrite(recs, nm, new Blob([csvFiled(filedRows)], { type: 'text/csv' }));
       wrote.push(nm + ' — every photo filed, with the file names ArcGIS matches on when attaching');
     }
+    /* BUILD 33: the full list of sites as they are now, whenever it differs from the last one written. The ArcGIS tool uses
+       the newest one to notice a site deleted on the phone; it flags it, never deletes it. */
+    const sig = siteSig();
+    if(sig !== (BI.snapSig || '')){
+      const rows = [['site_id', 'NAMEFEATURE', 'Category', 'latitude', 'longitude', 'last_updated_iso']].concat(
+        sortedSites().map(s => [s.id, s.name, catById(s.category).name, s.lat ?? '', s.lon ?? '', new Date(s.updated || s.created).toISOString()]));
+      const nm = await biFreeFile(recs, 'current-sites ' + stamp, 'csv');
+      await biWrite(recs, nm, new Blob([toCSV(rows)], { type: 'text/csv' }));
+      BI.snapSig = sig; await biSave();
+      wrote.push(nm + ' — the ' + sortedSites().length + ' sites as they are now, for the ArcGIS tool');
+    }
   }catch(err){
     console.error(err);
     BI.problems.push('Stopped early: ' + (err.message || err.name));
@@ -3789,7 +3802,7 @@ async function autoFile(){
   try{
     const p = biPending();
     AutoFile.status = '';
-    if(p.photos || p.fresh || p.changed) await bringInNew(null, { quiet: true });
+    if(p.photos || p.fresh || p.changed || p.snap) await bringInNew(null, { quiet: true });
     if(!AutoFile.needPermit && !AutoFile.status) await biFindEdits(null, true);
     if(AutoFile.needPermit && !AutoFile.told){
       AutoFile.told = true;
@@ -3952,7 +3965,8 @@ async function biFindEdits(btn, quiet){
         const base = filed.replace(/\.[^.]+$/, '');
         for(const n of inFolder){
           const m = /^(.*) edited( \d+)?\.([^.]+)$/i.exec(n);
-          if(!m || m[1].toLowerCase() !== base.toLowerCase()) continue;
+          const shortName = ph.length === 1 && m && m[1].toLowerCase() === sp.site.toLowerCase();   // BUILD 33: "Home 1 edited.png"
+          if(!m || (m[1].toLowerCase() !== base.toLowerCase() && !shortName)) continue;
           if(EDIT_EXT.indexOf(m[3].toLowerCase()) < 0) continue;
           if(((p.editMeta || []).concat(editFiles(p))).some(f => (f.name || '').toLowerCase() === n.toLowerCase())){ already++; continue; }
           if(btn) btn.textContent = '⏳ reading ' + n + '…';
