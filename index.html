@@ -641,7 +641,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
    Single-file PWA. Same pipeline as Outdoor Companion:
    edit here -> git push -> GitHub Pages -> home-screen app on iPhone.
    ======================================================================= */
-const BUILD = 31;
+const BUILD = 32;
 document.getElementById('buildBadge').textContent = 'BUILD ' + BUILD;
 document.getElementById('buildFoot').textContent = 'BUILD ' + BUILD;
 
@@ -653,6 +653,8 @@ const DEFAULT_CATS = [
   {id:'cem',    name:'Cemeteries',          ic:'🪦', color:'#6B8F71'},
   {id:'arch',   name:'Archaeological Sites',ic:'🏺', color:'#B5934A'},
   {id:'store',  name:'Old Stores',          ic:'🏬', color:'#C05F5F'},
+  {id:'mill',   name:'Mills',               ic:'⚙️', color:'#6E7F99'},   // BUILD 32: his ArcGIS folders
+  {id:'places', name:'Old Places',          ic:'🗺️', color:'#8C6D46'},
   {id:'other',  name:'Other',               ic:'📍', color:'#7A8288'}
 ];
 
@@ -1000,6 +1002,16 @@ async function loadAll(){
   S.cats   = (cats && cats.v && cats.v.length) ? cats.v : DEFAULT_CATS.slice();
   const cs = await dbGet('meta', 'catsync');
   S.catAll = (cs && cs.v && cs.v.all) || S.cats.slice(); S.catT = (cs && cs.v && cs.v.t) || {}; S.catGone = (cs && cs.v && cs.v.gone) || {};
+  /* BUILD 32: Mills and Old Places reach devices already in use — same id and time everywhere, so the lists merge. */
+  const ADDED_32 = Date.UTC(2026, 8, 17);
+  for(const id of ['mill', 'places']){
+    const d = DEFAULT_CATS.find(c => c.id === id);
+    if((S.catAll || []).some(c => c.id === id) || S.cats.some(c => c.name.toLowerCase() === d.name.toLowerCase())) continue;
+    const at = S.cats.findIndex(c => c.id === 'other');
+    S.cats.splice(at < 0 ? S.cats.length : at, 0, d);
+    S.catAll = (S.catAll || []).concat([d]); S.catT[id] = ADDED_32; S.catsDirty = true;
+  }
+  if(S.catsDirty) await saveCats();
   const ac = await dbGet('meta', 'account');
   if(ac && ac.v) Object.assign(S.acct, ac.v);
   rebuild();
@@ -2943,6 +2955,9 @@ function mergeCats(a, b){
 function setLocalCats(m){
   S.catAll = m.list; S.catT = m.t; S.catGone = m.gone;
   S.cats = m.list.filter(c => !((m.gone[c.id] || 0) > (m.t[c.id] || 0)));
+  /* BUILD 32: the built-in categories keep their own order (Other last of them); your own follow */
+  const rank = c => { const i = DEFAULT_CATS.findIndex(d => d.id === c.id); return i < 0 ? 1000 : i; };
+  S.cats.sort((x, y) => rank(x) - rank(y));
   if(!S.cats.length) S.cats = DEFAULT_CATS.slice();
 }
 
