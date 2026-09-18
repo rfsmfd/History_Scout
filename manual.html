@@ -67,14 +67,16 @@
 <div class="wrap">
 <h1 class="title">History Scout — Owner's Manual</h1>
 <p><b>Record today. Preserve tomorrow.</b></p>
-<nav class="toc"><b>What is in here</b><ol><li><a href="#what-history-scout-is">What History Scout is</a></li><li><a href="#1-getting-in">1 · Getting in</a></li><li><a href="#2-the-capture-screen-recording-in-the-field">2 · The Capture screen — recording in the field</a></li><li><a href="#3-the-compass">3 · The compass</a></li><li><a href="#4-your-sites">4 · Your sites</a></li><li><a href="#5-the-photo-viewer">5 · The photo viewer</a></li><li><a href="#6-the-map">6 · The map</a></li><li><a href="#7-more-your-account">7 · More — your account</a></li><li><a href="#8-more-your-computer">8 · More — your computer</a></li><li><a href="#9-more-exports-settings-and-the-rest">9 · More — exports, settings and the rest</a></li><li><a href="#10-a-full-trip-end-to-end">10 · A full trip, end to end</a></li><li><a href="#11-where-everything-lives-and-what-it-costs">11 · Where everything lives, and what it costs</a></li><li><a href="#12-what-is-still-to-build">12 · What is still to build</a></li><li><a href="#13-if-something-looks-wrong">13 · If something looks wrong</a></li></ol></nav>
-<p>For BUILD 26, 16 September 2026 · <a href="https://rfsmfd.github.io/History_Scout/">https://rfsmfd.github.io/History_Scout/</a></p>
+<nav class="toc"><b>What is in here</b><ol><li><a href="#what-history-scout-is">What History Scout is</a></li><li><a href="#1-getting-in">1 · Getting in</a></li><li><a href="#2-the-capture-screen-recording-in-the-field">2 · The Capture screen — recording in the field</a></li><li><a href="#3-the-compass">3 · The compass</a></li><li><a href="#4-your-sites">4 · Your sites</a></li><li><a href="#5-the-photo-viewer">5 · The photo viewer</a></li><li><a href="#6-the-map">6 · The map</a></li><li><a href="#7-more-your-account">7 · More — your account</a></li><li><a href="#8-more-your-computer">8 · More — your computer</a></li><li><a href="#9-more-exports-settings-and-the-rest">9 · More — exports, settings and the rest</a></li><li><a href="#10-arcgis-where-the-records-end-up">10 · ArcGIS — where the records end up</a></li><li><a href="#11-a-full-trip-end-to-end">11 · A full trip, end to end</a></li><li><a href="#12-where-everything-lives-and-what-it-costs">12 · Where everything lives, and what it costs</a></li><li><a href="#13-what-is-still-to-build">13 · What is still to build</a></li><li><a href="#14-if-something-looks-wrong">14 · If something looks wrong</a></li></ol></nav>
+<p>For BUILD 33, 17 September 2026 · <a href="https://rfsmfd.github.io/History_Scout/">https://rfsmfd.github.io/History_Scout/</a></p>
+<hr>
 <h2 id="what-history-scout-is">What History Scout is</h2>
-<p>A field notebook for old places. You photograph a homestead, church, school, cemetery, archaeological site or store; the app records where you stood, which way you faced, and when — then gets out of your way. The writing up happens later, at the kitchen table, on whichever device you have to hand.</p>
+<p>A field notebook for old places. You photograph a homestead, church, school, cemetery, archaeological site, mill, old place or store; the app records where you stood, which way you faced, and when — then gets out of your way. The writing up happens later, at the kitchen table, on whichever device you have to hand.</p>
 <p>It works in two halves:</p>
 <div class="tw"><table><thead><tr><th></th><th></th></tr></thead><tbody>
 <tr><td><b>The phone, in the field</b></td><td>Photograph with your iPhone's own camera — full size, zoom, flash — then bring the pictures in. History Scout files each one by where it was taken. No signal needed.</td></tr>
 <tr><td><b>The computer, at the desk</b></td><td>The same records on a big screen with a keyboard, photos filed into folders on your drive, and lists ready for ArcGIS.</td></tr>
+<tr><td><b>ArcGIS, at the end</b></td><td>One master project holds every site and every photograph for good. A tool brings each round of field work in, and never overwrites what you have done there yourself — see section 10.</td></tr>
 </tbody></table></div>
 <p>Everything you record is kept on the device you recorded it on <b>and</b>, once you sign in, in your own private online store. Nothing is shared with anyone.</p>
 <p><b>It is a web app.</b> There is nothing to install from a store: you open a web address, and on the phone you add it to the home screen so it behaves like any other app. Updates arrive by themselves; you tap a banner.</p>
@@ -113,7 +115,7 @@
 <tr><td>⚠ Not backed up — on this phone only</td><td>You chose to work without an account.</td></tr>
 <tr><td>✉ Confirm your email</td><td>Open the message History Scout sent you and tap its link.</td></tr>
 <tr><td>⏳ Waiting for approval</td><td>Your request is with the owner.</td></tr>
-<tr><td>· 12 photos to Send</td><td>Photos are waiting for you to press Send at home.</td></tr>
+<tr><td>· 12 photos to Send</td><td>That many photos are not in your account yet. They go by themselves when there is signal; <b>📤 Send</b> puts them all up at once while you watch.</td></tr>
 </tbody></table></div>
 <hr>
 <h2 id="2-the-capture-screen-recording-in-the-field">2 · The Capture screen — recording in the field</h2>
@@ -141,6 +143,17 @@
 <p>The photos also stay in your iPhone's Photos app. Delete them there whenever you like — History Scout keeps its own copies.</p>
 <p><b>The quick way — 12 MP:</b> tap <b>📷 Capture Site</b>, take the picture, tap <b>Use Photo</b>. Same filing, nothing asked.</p>
 <p>Either way, what each place is — and everything else — waits for later.</p>
+<h3>Every photo is checked as it is saved</h3>
+<p>History Scout writes the picture's own bytes into a store of its own, and <b>reads them straight back to prove they are there</b> before it says the photo is in. If a photo did not save, it tells you on the spot — <i>"That photo did NOT save on this phone. Take it again."</i> — while you are still standing where you can take it again.</p>
+<p>Photographs taken before this was built were carried across the first time the app opened. Any picture the phone could not read that day was <b>left exactly as it was and tried again the next time</b>, rather than written off — which is how three photographs that looked lost came back.</p>
+<h3>Where each photo is — ☁ ⚠ ✖</h3>
+<p>Every photo carries a mark, wherever it is shown:</p>
+<div class="tw"><table><thead><tr><th>Mark</th><th>What it means</th></tr></thead><tbody>
+<tr><td>☁</td><td>In your account</td></tr>
+<tr><td>⚠</td><td>On this phone only</td></tr>
+<tr><td>✖</td><td>Picture lost</td></tr>
+</tbody></table></div>
+<p><b>Photos go to your account by themselves.</b> There is no button to press: each one goes after it is saved, when the app opens, and again when signal returns. ⚠ simply means it has not had its chance yet — leave the app open where there is signal and the mark turns to ☁.</p>
 <h3>Sorting what you photographed</h3>
 <ol>
 <li>Tap the <b>📥 Unsorted</b> line on the Capture screen, or the <b>📥 Unsorted</b> chip in <b>Sites</b>. Places waiting to be sorted are listed first, marked <i>To sort</i>.</li>
@@ -159,7 +172,7 @@
 <p>A photo in your library may have been taken miles away, days ago — so History Scout does not stamp it with where you are standing now. Pick several at once and each goes by its own location: photos taken in different places become different places in Unsorted.</p>
 <ul>
 <li><b>Each photo is dated by when the camera took it</b>, not when you brought it in, so a day's photos stay in order and the dates in your ArcGIS lists are true.</li>
-<li><b>The same photo is never brought in twice.</b> History Scout recognises one it already has — by the second it was taken and its exact size — and skips it. A photo you deleted can be brought in again.</li>
+<li><b>The same photo is never brought in twice.</b> History Scout recognizes one it already has — by the second it was taken and its exact size — and skips it. A photo you deleted can be brought in again.</li>
 <li><b>Details</b> shows the <b>File type</b> (JPEG or HEIC) alongside the size and where the location came from.</li>
 </ul>
 <ul>
@@ -206,7 +219,7 @@
 <ul>
 <li>Tap any photo to open it full screen.</li>
 <li><b>📷 Add photo</b> / <b>🖼 From library</b> add more.</li>
-<li>A ✨ on a photo means you have added an edited version; a ☁ means it is in your online store.</li>
+<li>A ✨ on a photo means you have added an edited version. The other marks say where the picture itself is: <b>☁</b> in your account · <b>⚠</b> on this phone only · <b>✖</b> picture lost.</li>
 </ul>
 <p><b>Recorded position</b></p>
 <ul>
@@ -240,7 +253,7 @@
 <p><b>Zooming:</b> pinch to zoom, or double-tap to jump to full detail — one photo pixel per screen pixel — and double-tap again to come back. Past a certain point the app swaps in the full-size original, so you are judging real sharpness, not a preview.</p>
 <hr>
 <h2 id="6-the-map">6 · The map</h2>
-<p>Tap <b>🗺 Map</b>. Every site with a position is a pin, coloured and marked by category.</p>
+<p>Tap <b>🗺 Map</b>. Every site with a position is a pin, colored and marked by category.</p>
 <ul>
 <li><b>Aerial</b>, <b>Topo</b> and <b>Street</b> switch the background.</li>
 <li><b>📍 Me</b> centres on you. <b>⤢ All</b> fits every site on screen.</li>
@@ -257,14 +270,20 @@
 <li><b>Photos online</b> — how many of the photos on this device are in your online store.</li>
 </ul>
 <h3>Send — putting photos online</h3>
-<p>Records go up by themselves; they are tiny. Photos are large, so they go only when you say so.</p>
+<p>Records go up by themselves, and <b>so do photos now</b>: each one goes after it is saved, when the app opens, and when signal returns. <b>📤 Send</b> is there for when you want the lot put up at once, while you watch it happen.</p>
 <ol>
 <li>Get on Wi-Fi at home.</li>
 <li><b>More → 📤 Send N photos</b>.</li>
 <li><b>Leave History Scout open</b> until it finishes. iPhones stop web apps sending in the background.</li>
 </ol>
-<p>While it runs you see which photo it is on and how much has gone. <b>Stop</b> halts it; pressing Send again carries on from where it stopped.</p>
+<p>While it runs you see which photo it is on and how much has gone. <b>Every step is named, with a clock running beside it</b>, so you can see it working rather than guess. The phone's own copy of the picture is read first. Google is given 30 seconds to answer a check and one minute of failed retries for an upload; if it still will not go, <b>Send stops and tells you which photo, which step, and why</b>, instead of sitting there looking frozen. <b>Stop</b> halts it yourself; pressing Send again carries on from where it stopped.</p>
 <p>A photo counts as sent only when Google confirms the copy at exactly the right size. <b>Your photos stay on the phone as well</b> — Send never removes anything. When it finishes, it tells you how much space you can now free up on the phone (see <i>Storage</i>).</p>
+<h3>Photos in my account — the album of what is in the cloud</h3>
+<p><b>More → Photos in my account</b> shows your pictures <b>as they are in the account</b>, fetched online. Nothing on this page is read from the phone, so what you see is proof of what is actually stored — a photo album of the cloud.</p>
+<ul>
+<li>It needs signal, because every picture is loaded from your account.</li>
+<li>Where a photo has an edited version, it shows <b>the newest edit, labeled</b>, rather than only the camera's original.</li>
+</ul>
 <h3>Deleted items</h3>
 <p>Nothing you delete is erased. <b>🗑 Deleted items</b> lists deleted sites and photos with the date they went.</p>
 <ol>
@@ -285,7 +304,7 @@
 <p><b>More → Sign out.</b> Your records and photos stay on the device; they simply stop being backed up until you sign in again.</p>
 <hr>
 <h2 id="8-more-your-computer">8 · More — your computer</h2>
-<p>This card only does its full job in <b>Edge or Chrome on a computer</b>, because only those let a web page write into folders you choose. On a phone, or in Safari or Firefox, it offers a download per site instead.</p>
+<p>This card only does its full job in <b>Edge or Chrome on a computer</b>, because only those let a web page write into folders you choose. On a phone, or in Safari or Firefox, it offers a download per site instead — and on a computer running Safari or Firefox the app says so plainly, and tells you to open it in Chrome or Edge, on Windows or Mac.</p>
 <h3>Setting up, the first time</h3>
 <ol>
 <li>Open the app on the computer and sign in.</li>
@@ -306,6 +325,7 @@
 <tr><td><code>Records\changed-sites &lt;date&gt;.csv</code></td><td>Sites you edited after bringing them in, to update by hand</td></tr>
 <tr><td><code>Records\photos &lt;date&gt;.csv</code></td><td>Every photo filed, with the file name ArcGIS attaches by</td></tr>
 <tr><td><code>Records\new-sites &lt;date&gt;.geojson</code></td><td>The same sites with their positions built in, for QGIS or ArcGIS</td></tr>
+<tr><td><code>Records\current-sites &lt;date&gt;.csv</code></td><td>Written whenever the list of sites has changed: every site you have now. ArcGIS reads the newest one to notice a site you deleted on the phone — it flags that site, and never deletes anything</td></tr>
 </tbody></table></div>
 <p>Three rules it never breaks:</p>
 <ul>
@@ -313,13 +333,27 @@
 <li><b>Only what is new.</b> Each photo and site remembers it came in, on that computer.</li>
 <li><b>If the folder cannot be reached</b> — the drive unplugged — it says so and writes nothing at all.</li>
 </ul>
+<h3>Filing happens by itself now</h3>
+<p>You no longer have to remember the buttons. While History Scout is open in <b>Chrome or Edge on a computer</b>, new photos and edited photos are filed onto the drive by themselves:</p>
+<ul>
+<li>shortly after you open the app,</li>
+<li>every five minutes,</li>
+<li>and soon after photos arrive from the phone.</li>
+</ul>
+<p>The rules are exactly the same as the buttons' — nothing is overwritten, only what is new is written. Two allowances are made:</p>
+<ul>
+<li><b>An edit saved less than a minute ago waits for the next round</b>, because Photoshop may still be writing it.</li>
+<li><b>An unplugged drive is waited for</b>, not complained about. Plug it in and the next round files.</li>
+</ul>
+<p>If the browser wants you to allow the folder again, it waits for your tap — it will never ask on its own.</p>
 <h3>Check for edited photos</h3>
 <ol>
 <li>In Photoshop, fix the photo and save it <b>beside the original</b>, named after it: <code>Old Salem Church 01 edited.jpg</code>. A second pass is <code>… edited 2.jpg</code>.</li>
 <li><b>More → Your computer → ✨ Check for edited photos</b>.</li>
 </ol>
-<p>It reads your site folders, finds files named after photos it filed, and adds them to those records. Your drive is only read — nothing is renamed, moved or replaced.</p>
+<p>It reads your site folders, finds files named after photos it filed, and adds them to those records. Your drive is only read — nothing is renamed, moved or replaced. Where a site has only the one photograph, an edit named simply after the site — <code>Charlie's Hope Plantation edited.png</code> — is recognized too, as well as the longer <code>&lt;original name&gt; edited.png</code>.</p>
 <p>From then on the record shows your edited version: thumbnails, the viewer, stamped copies and exports. The camera's original is kept beside it for good, and <b>🖼 Show original</b> in the viewer flips between them.</p>
+<p><b>An edit made on the computer goes up to your account</b>, even though the photograph was taken on the phone. Before, the original had to be on the same device, so a Photoshop edit made at the desk would have stayed at the desk. It now travels like anything else, and shows in <b>Photos in my account</b> as the newest version.</p>
 <p>On a phone, where there are no folders to search, use <b>Details → ✨ Add edited version</b> on the photo instead.</p>
 <h3>Under "Change where things go"</h3>
 <ul>
@@ -353,6 +387,7 @@
 </ul>
 <h3>Categories</h3>
 <p>Add your own category with a name and it appears as a tile when you sort a place, and as a folder when photos are filed. Categories travel to your other devices. A category with no sites can be removed.</p>
+<p><b>Mills</b> and <b>Old Places</b> are now there as well, added to match the reorganized ArcGIS project. They appear on the phone and on the computer alike, and do not double up when the two sync.</p>
 <h3>Storage</h3>
 <p>How many sites and photos you have, how big your photos are in full, the space left on the device, and how much of it History Scout's full-size photos take.</p>
 <h3>Freeing up space on the phone</h3>
@@ -383,30 +418,82 @@
 <h3>Diagnostics</h3>
 <p>A plain list of what is working on this device: secure connection, installed to the home screen, GPS, compass permission, whether sensor readings are arriving, storage, the map and export libraries, the offline helper, your account, and whether you are online. Useful when something behaves oddly.</p>
 <hr>
-<h2 id="10-a-full-trip-end-to-end">10 · A full trip, end to end</h2>
+<h2 id="10-arcgis-where-the-records-end-up">10 · ArcGIS — where the records end up</h2>
+<p>The phone records it, the computer files it, and <b>ArcGIS is where it stays</b>. One tool carries a round of field work in, and it is built so that it can never undo your own work there.</p>
+<h3>The project of record</h3>
+<p><b><code>C:\GIS_Projects\HISTORIC SITES MASTER PROJECT</code></b> is the project you open. It holds 133 layers, none of them broken.</p>
+<p>Inside it, <b>one single table holds every historic site</b>: <code>HISTORIC SITES.gdb\Historic_Sites</code> — 124 sites and 199 photographs as it stands. On the map they are drawn as folders by History Scout category — Old Homes, Old Churches, Old Schools, Cemeteries, Archaeological Sites, Mills, Old Places, Other — with a layer for each county inside each folder.</p>
+<p>Nothing was thrown away to get there. The 14 old per-county site layers were archived into <code>ARCHIVE 2026-09-16.gdb</code>, each named <code>&lt;name&gt;_premerge</code>, only after every site and every photograph had been proved present in the new table. The old <code>C:\GIS_Projects\OLD_HOMES_PROJECT</code> sits idle and untouched for reference; whether it is ever deleted is a separate decision, and yours.</p>
+<h3>The tool: Bring in History Scout</h3>
+<p>The toolbox is <code>Tools\History Scout.pyt</code>, and the tool inside it is <b>Bring in History Scout</b>. Its boxes come already filled in: records from <code>C:\GIS_Projects\History Scout</code>, photos from <code>D:\History Scout</code>, the Historic Sites table, and the Virginia county boundaries. A <b>Dry run</b> box shows you exactly what would happen and changes nothing.</p>
+<p><b>To run it</b></p>
+<ol>
+<li>Open History Scout on the PC and let it file — that is what writes the current-sites list the tool reads.</li>
+<li>In ArcGIS Pro: <b>Catalog</b> pane → <b>Toolboxes</b> → right-click → <b>Add Toolbox</b> → <code>Tools\History Scout.pyt</code>.</li>
+<li>Open <b>Bring in History Scout</b>, tick <b>Dry run</b>, press <b>Run</b>, and read the messages.</li>
+<li>Untick <b>Dry run</b> and run it for real.</li>
+</ol>
+<p>A plain report of what it did is written into the records folder as <code>ArcGIS import report &lt;date time&gt;.txt</code>.</p>
+<h3>What it does, every run</h3>
+<div class="tw"><table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><b>New sites</b></td><td>Added. The county is worked out from where the point actually falls. Public starts at No.</td></tr>
+<tr><td><b>Changed sites</b></td><td>Updated field by field</td></tr>
+<tr><td><b>Your own ArcGIS edits</b></td><td><b>Kept, and reported — never overwritten.</b> An empty box from the phone never wipes something you typed in ArcGIS; only a box the tool itself filled may be emptied, which means you cleared it on the phone</td></tr>
+<tr><td><b>Sites deleted on the phone</b></td><td>Marked <i>Deleted in History Scout</i>. <b>Nothing is ever deleted.</b> If one comes back, it is marked Active again</td></tr>
+<tr><td><b>Photographs</b></td><td><b>Every one</b> is attached — the original and every edited version — with its details: date taken, direction faced, original file name, file date, and where you stood</td></tr>
+<tr><td><b>The main photo</b></td><td>The most recent edited photo becomes the main photo for that place</td></tr>
+<tr><td><b>A new category or county</b></td><td>Gets its own map layer, in the right folder, with your symbols: shape by category, color by county, your pin-with-house for homes, icons that size with the zoom, and names in charcoal with a white halo</td></tr>
+</tbody></table></div>
+<p>Two things worth knowing about matching: sites are matched by <b>History Scout's own site ID, never by name</b>, so two places with the same name in different counties — Oakland Plantation in Southampton and in Sussex, 26 miles apart — are never merged. And where you have deliberately recorded two records for one name, as with Round Hill the hill and Round Hill the farm, they stay two records, each pointing at the other.</p>
+<h3>The pins — where the photograph was taken</h3>
+<p>History Scout puts the pin <b>where you stood to take the photograph</b>, which is usually the road rather than the building. So in ArcGIS you drag the pin onto the house and save it.</p>
+<ul>
+<li><b>The tool then keeps where you put it.</b> It marks the site <i>On the subject</i>, and says so once, in plain words.</li>
+<li>The county follows the pin wherever it ends up.</li>
+<li><b>Where you stood is kept on the photograph</b> (<code>CameraLat</code>, <code>CameraLon</code>), so nothing is lost by moving the pin.</li>
+</ul>
+<h3>Credit, rights and the watermark</h3>
+<p>Not every photograph in the collection is yours — some come from the Library of Virginia and other institutions, and some of your own edited copies already carry your watermark. So every photograph carries:</p>
+<p><b><code>TakenBy</code></b> who took it · <b><code>CameFrom</code></b> where it came from · <b><code>MayPublish</code></b> Yes / No / Not sure yet, from a dropdown · <b><code>RightsNote</code></b> the conditions · <b><code>Caption</code></b> · <b><code>CameraLat</code></b> and <b><code>CameraLon</code></b> where you stood. Sites carry <b><code>RecordedBy</code></b> and <b><code>PinPlacement</code></b>.</p>
+<p>The rules:</p>
+<ul>
+<li>Your own work is credited <b>Buddy Faison Photography</b>.</li>
+<li><b>Your logo never goes on a photograph you did not take.</b> A credit line for the source goes on instead.</li>
+<li><b>Nothing goes on a public map or website unless its May publish says Yes.</b> Anything not plainly yours starts at <i>Not sure yet</i> — your 4 History Scout photographs are Yes, the 195 older ones are Not sure yet until they have been sorted.</li>
+<li>A copy that already carries your watermark must not be stamped a second time.</li>
+<li><b>Watermarking happens when a photograph is published, never burned into the archive copy.</b> The logo files are <code>C:\Users\Buddy\Desktop\LOGOS\Photography Logo Buddy-black.png</code> and <code>-white.png</code>, white or black chosen by how dark that corner of the picture is.</li>
+</ul>
+<p>The worked example already in the database is <b>Charlie's Hope Plantation</b> — a ruin with only outbuildings left, whose two photographs are Library of Virginia survey material that you enhanced: the house when it still stood, and the survey notes.</p>
+<hr>
+<h2 id="11-a-full-trip-end-to-end">11 · A full trip, end to end</h2>
 <ol>
 <li><b>In the field</b>: photograph with the iPhone's Camera app. No signal needed. When you stop, tap <b>🖼 From Library</b> and bring the pictures in.</li>
 <li><b>At a stop or at night</b>: tap the <b>📥 Unsorted</b> line and sort each place — one tile and <b>Sort it</b>.</li>
-<li><b>At home, on Wi-Fi</b>: open the app, <b>More → Send</b>, wait for it to finish.</li>
-<li><b>At the desk</b>: open the same web address on the PC. Your sites are there. Fill in the forms with a keyboard.</li>
-<li><b>Bring in new</b>: photos land in <code>Photos\Category\Site\</code>, the lists land in <code>Records</code>.</li>
+<li><b>Whenever there is signal</b>: photos go to your account by themselves. At home on Wi-Fi you can open the app and press <b>📤 Send</b> to put the rest up at once while you watch.</li>
+<li><b>At the desk</b>: open the same web address on the PC, in Chrome or Edge. Your sites are there. Fill in the forms with a keyboard.</li>
+<li><b>Filing</b>: while the app is open it files by itself — photos land in <code>Photos\Category\Site\</code>, the lists land in <code>Records</code>. <b>📥 Bring in new</b> does it at once if you are in a hurry.</li>
 <li><b>Photoshop</b>: fix what needs fixing, save beside the original as <code>… edited.jpg</code>.</li>
-<li><b>Check for edited photos</b>: your edit goes into the record, the original kept.</li>
-<li><b>ArcGIS Pro</b>: import <code>new-sites &lt;date&gt;.csv</code> — it leads with your 17 template columns — then attach photos using the photos list, which names each file.</li>
+<li><b>The edit goes in</b>: on the next round, or with <b>✨ Check for edited photos</b>, your edit goes into the record with the original kept — and up to your account.</li>
+<li><b>ArcGIS Pro</b>: run <b>Bring in History Scout</b>, dry run first. New sites are added, changed sites updated without touching what you typed in ArcGIS, every photograph attached with its details, and the newest edit made the main photo.</li>
+<li><b>Drag the pin</b> off the road and onto the building, and save. The tool keeps it there from then on.</li>
 <li>Anything you change later on either device is on the other within seconds.</li>
 </ol>
 <hr>
-<h2 id="11-where-everything-lives-and-what-it-costs">11 · Where everything lives, and what it costs</h2>
+<h2 id="12-where-everything-lives-and-what-it-costs">12 · Where everything lives, and what it costs</h2>
 <div class="tw"><table><thead><tr><th></th><th></th></tr></thead><tbody>
 <tr><td><b>On the phone</b></td><td>Every record and photo, in the app's own storage. Works with no signal.</td></tr>
 <tr><td><b>In your account</b></td><td>Records, and every photo you have sent. Private to you: only a signed-in, confirmed, approved email can read them.</td></tr>
 <tr><td><b>On your computer</b></td><td>Whatever Bring in new has filed, in ordinary folders you chose.</td></tr>
+<tr><td><b>In ArcGIS</b></td><td><code>HISTORIC SITES MASTER PROJECT</code> — one table with every site and every photograph, for good. Nothing there is ever deleted, and nothing you have typed there is overwritten.</td></tr>
 </tbody></table></div>
 <p>Google's prices at your scale: records and sign-in are free; photo storage is about 2.6¢ per GB a month past the free 5 GB, and about 12¢ per GB to bring them down. A $5-a-month budget alert is set, which emails you rather than switching anything off.</p>
 <p><b>Sensitive sites</b> keep their coordinates out of stamped copies, and exports mark them so you know those files are not for sharing. Landowner names and contacts are in your records and exports — they never leave your account on their own.</p>
 <hr>
-<h2 id="12-what-is-still-to-build">12 · What is still to build</h2>
+<h2 id="13-what-is-still-to-build">13 · What is still to build</h2>
+<p>The link into ArcGIS is built and working — see section 10 — so it has come off this list. What is left:</p>
 <div class="tw"><table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><b>Matching the OLD PLACES photographs</b></td><td>About 1,659 photographs, some 25 GB of them, in <code>D:\OneDrive_Rescue\OLD PLACES</code>, to be matched to sites — with you confirming every match.</td></tr>
+<tr><td><b>The public website, with watermarking</b></td><td>Publishing only what May publish says Yes to, with your logo put on at the moment of publishing and never burned into the archive copy.</td></tr>
 <tr><td><b>Capture on the road</b></td><td>Photos saved the instant they are taken into an <b>Unsorted</b> pile, with the category chosen later; and the position recorded at the moment the shutter fires. First, a test of shooting drive-bys with the iPhone Camera app and bringing them in with <b>From Library</b>.</td></tr>
 <tr><td><b>Photos from the Canon R7</b></td><td>Camera Connect sends them to the phone; History Scout would take them in, RAW included, and keep RAW beside the JPEG.</td></tr>
 <tr><td><b>Cemeteries and graves</b></td><td>The cemetery, numbered graves inside it, and the people in them; five ways to place a grave, including by tape under tree canopy; and <b>Read this stone</b> for a suggested transcription. Designed in the Blueprint, waiting on your answers.</td></tr>
@@ -415,11 +502,16 @@
 <tr><td><b>Templates and KML</b></td><td>Both sketched in the Blueprint, neither started.</td></tr>
 </tbody></table></div>
 <hr>
-<h2 id="13-if-something-looks-wrong">13 · If something looks wrong</h2>
+<h2 id="14-if-something-looks-wrong">14 · If something looks wrong</h2>
 <div class="tw"><table><thead><tr><th>What you see</th><th>What to do</th></tr></thead><tbody>
 <tr><td>The app shows an old build</td><td><b>More → Version → Check for updates</b>, then the banner. If it stays behind, <b>Reinstall the app</b> — your records are not touched.</td></tr>
 <tr><td>"Waiting for approval"</td><td>The owner has to approve your email. Nothing is lost meanwhile.</td></tr>
-<tr><td>Photos show as "Not sent yet" on the PC</td><td>Press <b>Send</b> on the phone; the PC picks them up.</td></tr>
+<tr><td>Photos show as "Not sent yet" on the PC</td><td>They go up by themselves once the phone has signal. To push them now, open the app on the phone and press <b>📤 Send</b>; the PC picks them up.</td></tr>
+<tr><td>A photo is marked ⚠</td><td>It is on that phone only and has not been up yet. Leave the app open where there is signal, or press <b>📤 Send</b>.</td></tr>
+<tr><td>A photo is marked ✖</td><td>That picture itself could not be read. Take the photograph again when you can.</td></tr>
+<tr><td><b>Send</b> stops part way</td><td>It names the photo, the step and the reason rather than hanging. Read that line — usually signal — and press Send again; it carries on from where it stopped.</td></tr>
+<tr><td>"That photo did NOT save on this phone"</td><td>The picture did not write safely, and History Scout says so rather than letting you walk away believing it is there. Take it again while you are still standing at the place.</td></tr>
+<tr><td>The computer says to use Chrome or Edge</td><td>You are in Safari or Firefox. Those cannot write into your folders. Open the same web address in Chrome or Edge, on Windows or Mac.</td></tr>
 <tr><td>"That folder isn't there"</td><td>The drive is unplugged. Nothing was written. Plug it in and try again.</td></tr>
 <tr><td>Nothing filed by Bring in new</td><td>Everything had been filed before. Use <b>Bring in everything again</b> only if you changed folders.</td></tr>
 <tr><td>An edited photo is not found</td><td>It must sit beside the original and be named after it: <code>Old Salem Church 01 edited.jpg</code>.</td></tr>
@@ -429,6 +521,7 @@
 <hr>
 <p><i>History Scout is built and maintained for Faison Digital Works, LLC. The app, this manual and the Blueprint are kept in <code>Desktop\FAISON DIGITAL WORKS\HISTORY APP</code>.</i></p>
 <footer>History Scout · Faison Digital Works, LLC · this page is kept up to date as each build lands.</footer>
+
 </div>
 </body>
 </html>
